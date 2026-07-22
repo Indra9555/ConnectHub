@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F5F5">
+
+
+    <LinearLayout
+
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="visible"/>
+
+
+        <!-- Profile Card -->
+
+        <com.google.android.material.card.MaterialCardView
+
+            android:layout_width="match_parent"
+            android:layout_height="469dp"
+
+            app:cardCornerRadius="20dp"
+            app:cardElevation="4dp">
+
+
+            <LinearLayout
+
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+
+                <!-- Profile Image -->
+
+                <com.google.android.material.imageview.ShapeableImageView
+
+                    android:id="@+id/imgProfile"
+
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+
+                    android:scaleType="centerCrop"
+
+                    android:src="@drawable/ic_person"
+
+                    app:shapeAppearanceOverlay="@style/CircleImage" />
+
+
+                <TextView
+
+                    android:id="@+id/tvName"
+
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+
+                    android:layout_marginTop="15dp"
+
+                    android:text="Name"
+
+                    android:textSize="24sp"
+
+                    android:textStyle="bold" />
+
+
+                <TextView
+
+                    android:id="@+id/tvUsername"
+
+                    android:layout_width="wrap_content"
+
+                    android:layout_height="wrap_content"
+
+                    android:layout_marginTop="5dp"
+
+                    android:text="username"
+
+                    android:textSize="16sp" />
+
+
+                <TextView
+
+                    android:id="@+id/tvBio"
+
+                    android:layout_width="match_parent"
+
+                    android:layout_height="wrap_content"
+
+                    android:layout_marginTop="12dp"
+
+                    android:gravity="center"
+
+                    android:text="Bio"
+
+                    android:textSize="15sp" />
+
+
+                <TextView
+
+                    android:id="@+id/tvEmail"
+
+                    android:layout_width="wrap_content"
+
+                    android:layout_height="wrap_content"
+
+                    android:visibility="gone" />
+
+
+                <!-- Stats -->
+
+                <LinearLayout
+
+                    android:layout_width="match_parent"
+
+                    android:layout_height="wrap_content"
+
+                    android:layout_marginTop="25dp"
+
+                    android:gravity="center"
+
+                    android:orientation="horizontal">
+
+
+                    <LinearLayout
+
+                        android:layout_width="0dp"
+
+                        android:layout_height="wrap_content"
+
+                        android:layout_weight="1"
+
+                        android:gravity="center"
+
+                        android:orientation="vertical">
+
+
+                        <TextView
+
+                            android:id="@+id/tvPostCount"
+
+                            android:layout_width="wrap_content"
+
+                            android:layout_height="wrap_content"
+
+                            android:text="0"
+
+                            android:textSize="20sp"
+
+                            android:textStyle="bold" />
+
+
+                        <TextView
+
+                            android:layout_width="wrap_content"
+
+                            android:layout_height="wrap_content"
+
+                            android:text="Posts" />
+
+                    </LinearLayout>
+
+
+                    <LinearLayout
+
+                        android:layout_width="0dp"
+
+                        android:layout_height="wrap_content"
+
+                        android:layout_weight="1"
+
+                        android:gravity="center"
+
+                        android:orientation="vertical">
+
+
+                        <TextView
+
+                            android:id="@+id/tvFollowers"
+
+                            android:layout_width="wrap_content"
+
+                            android:layout_height="wrap_content"
+
+                            android:text="0"
+
+                            android:textSize="20sp"
+
+                            android:textStyle="bold" />
+
+
+                        <TextView
+
+                            android:layout_width="wrap_content"
+
+                            android:layout_height="wrap_content"
+
+                            android:text="Followers" />
+
+                    </LinearLayout>
+
+
+                    <LinearLayout
+
+                        android:layout_width="0dp"
+
+                        android:layout_height="wrap_content"
+
+                        android:layout_weight="1"
+
+                        android:gravity="center"
+
+                        android:orientation="vertical">
+
+
+                        <TextView
+
+                            android:id="@+id/tvFollowing"
+
+                            android:layout_width="wrap_content"
+
+                            android:layout_height="wrap_content"
+
+                            android:text="0"
+
+                            android:textSize="20sp"
+
+                            android:textStyle="bold" />
+
+
+                        <TextView
+
+                            android:layout_width="wrap_content"
+
+                            android:layout_height="wrap_content"
+
+                            android:text="Following" />
+
+
+                    </LinearLayout>
+
+
+                </LinearLayout>
+
+
+                <Button
+
+                    android:id="@+id/btnEditProfile"
+
+                    android:layout_width="match_parent"
+
+                    android:layout_height="wrap_content"
+
+                    android:layout_marginTop="25dp"
+
+                    android:text="Edit Profile" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnFollow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="Follow"
+                    android:visibility="gone"/>
+
+
+                <Button
+
+                    android:id="@+id/btnUploadImage"
+
+                    android:layout_width="match_parent"
+
+                    android:layout_height="wrap_content"
+
+                    android:layout_marginTop="10dp"
+
+                    android:text="Change Profile Image" />
+
+
+
+            </LinearLayout>
+
+
+        </com.google.android.material.card.MaterialCardView>
+
+
+
+        <!-- My Posts -->
+
+        <TextView
+
+            android:layout_width="wrap_content"
+
+            android:layout_height="wrap_content"
+
+            android:text="My Posts"
+
+            android:textSize="22sp"
+
+            android:textStyle="bold"
+
+            android:layout_marginTop="25dp"/>
+
+
+
+        <androidx.recyclerview.widget.RecyclerView
+
+            android:id="@+id/recyclerMyPosts"
+
+            android:layout_width="match_parent"
+
+            android:layout_height="wrap_content"
+
+            android:nestedScrollingEnabled="false"/>
+
+
+    </LinearLayout>
+
+
+</ScrollView>
