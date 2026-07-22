@@ -18,19 +18,15 @@ The project is built using modern Android development practices with Firebase as
 
 ---
 
-# 📸 Screenshots
-
-> Screenshots will be added soon.
+## 📸 Screenshots
 
 | Login | Home Feed | Profile |
 |-------|-----------|----------|
-| 📷 | 📷 | 📷 |
+| ![](screenshots/login.jpeg) | ![](screenshots/home.jpeg) | ![](screenshots/profile.jpeg) |
 
-| Chat | Comments | Notifications |
-|------|-----------|---------------|
-| 📷 | 📷 | 📷 |
-
----
+| Chat | Notifications | Comments |
+|------|---------------|-----------|
+| ![](screenshots/chat.jpeg) | ![](screenshots/notifications.jpeg) | ![](screenshots/comments.jpeg) |
 
 # 🚀 Features
 
