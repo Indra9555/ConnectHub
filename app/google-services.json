@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "147292634978",
+    "project_id": "connecthub-6f3b1",
+    "storage_bucket": "connecthub-6f3b1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:147292634978:android:3527e3a9f0bf8c51fbf63b",
+        "android_client_info": {
+          "package_name": "com.example.connecthub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArTV8qL1badE8fciv3Ue54z8Fdgz5OZMg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
