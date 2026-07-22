@@ -3,7 +3,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#1877F2">
+    android:background="@android:color/system_inverse_primary_dark">
 
     <ImageView
         android:id="@+id/logo"
@@ -11,7 +11,7 @@
         android:layout_height="120dp"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="170dp"
-        android:src="@mipmap/ic_launcher"/>
+        android:src="@drawable/connecthub_logo" />
 
     <TextView
         android:layout_width="wrap_content"
@@ -22,6 +22,6 @@
         android:text="ConnectHub"
         android:textColor="#FFFFFF"
         android:textSize="32sp"
-        android:textStyle="bold"/>
+        android:textStyle="bold" />
 
 </RelativeLayout>

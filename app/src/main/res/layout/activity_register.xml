@@ -12,11 +12,11 @@
         android:padding="24dp">
 
         <ImageView
-            android:id="@+id/imgProfile"
+            android:id="@+id/imgLogo"
             android:layout_width="120dp"
             android:layout_height="120dp"
-            android:layout_gravity="center"
-            android:src="@mipmap/ic_launcher"/>
+            android:layout_gravity="center_horizontal"
+            android:src="@drawable/connecthub_logo" />
 
         <TextView
             android:layout_width="wrap_content"
