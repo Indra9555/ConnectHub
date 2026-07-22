@@ -1,93 +1,241 @@
 # 📱 ConnectHub
 
-ConnectHub is a modern Android social networking application built using **Java**, **Firebase**, and **Cloudinary**.
+<p align="center">
+  <b>A modern Android social media application built with Java, Firebase & Cloudinary.</b>
+</p>
 
-It allows users to connect, share posts, chat in real-time, and interact through likes, comments, and notifications.
+<p align="center">
+  Connect • Share • Chat • Discover
+</p>
 
 ---
 
-# ✨ Features
+## ✨ Overview
 
-## Authentication
-- Firebase Authentication
-- Login
-- Register
+ConnectHub is a feature-rich Android social networking application that allows users to connect with others, create posts, chat in real time, and interact through likes, comments, and notifications.
+
+The project is built using modern Android development practices with Firebase as the backend and Cloudinary for image storage.
+
+---
+
+# 📸 Screenshots
+
+> Screenshots will be added soon.
+
+| Login | Home Feed | Profile |
+|-------|-----------|----------|
+| 📷 | 📷 | 📷 |
+
+| Chat | Comments | Notifications |
+|------|-----------|---------------|
+| 📷 | 📷 | 📷 |
+
+---
+
+# 🚀 Features
+
+## 👤 Authentication
+
+- User Registration
+- User Login
 - Auto Login
-- Logout
+- Secure Logout
+- Firebase Authentication
 
-## Profile
-- Edit Profile
-- Profile Picture Upload
-- Bio
-- Followers & Following
+---
 
-## Feed
+## 🏠 Home Feed
+
 - Create Posts
+- View Posts
 - Like Posts
 - Comment on Posts
 - Share Posts
+- Real-time Feed Updates
 
-## Chat
+---
+
+## 👤 User Profile
+
+- Edit Profile
+- Upload Profile Picture
+- Bio
+- Profile Information
+- View User Posts
+
+---
+
+## 💬 Real-Time Chat
+
+- One-to-One Chat
 - Real-time Messaging
 - Image Messages
 - Online / Offline Status
 - Last Seen
 - Typing Indicator
-- Read Receipts (✓ ✓)
+- Read Receipts (✓ ✓ Seen)
 
-## Notifications
-- Like Notifications
-- Comment Notifications
-- Follow Notifications
+---
+
+## ❤️ Social Features
+
+- Follow Users
+- Like System
+- Comments
+- Notifications
 
 ---
 
 # 🛠 Tech Stack
 
-- Java
-- Android Studio
-- Firebase Authentication
-- Cloud Firestore
-- Firebase Cloud Messaging
-- Cloudinary
-- Glide
-- Material Design 3
+| Technology | Usage |
+|------------|-------|
+| Java | Android Development |
+| Firebase Authentication | User Authentication |
+| Cloud Firestore | Database |
+| Cloudinary | Image Storage |
+| Glide | Image Loading |
+| Material Design 3 | UI Design |
+| RecyclerView | Dynamic Lists |
+
+---
+
+# 📂 Project Structure
+
+```
+app
+│
+├── activities
+├── adapters
+├── firebase
+├── helpers
+├── models
+├── network
+├── repository
+├── services
+└── utils
+```
 
 ---
 
 # 🏗 Architecture
 
 ```
-Activities
-│
-├── Adapters
-├── Models
-├── Repository
-├── Firebase
-├── Network
-├── Helpers
-└── Utils
+UI (Activities)
+        │
+        ▼
+Repository Layer
+        │
+        ▼
+Firebase Firestore
+        │
+        ▼
+Cloudinary (Images)
 ```
 
 ---
 
-# 🚀 Upcoming Features
+# 🔥 Current Features
 
-- Instant Image Preview
+- ✅ Firebase Authentication
+- ✅ User Profiles
+- ✅ Edit Profile
+- ✅ Create Posts
+- ✅ Like System
+- ✅ Comment System
+- ✅ Search Users
+- ✅ Chat List
+- ✅ Real-time Chat
+- ✅ Image Messages
+- ✅ Online Status
+- ✅ Typing Indicator
+- ✅ Last Seen
+- ✅ Read Receipts
+
+---
+
+# 🚧 Upcoming Features
+
 - Delete Messages
 - Edit Messages
-- Full Screen Images
+- Full Screen Image Viewer
+- Push Notifications
 - Voice Messages
-- Stories
-- Video Upload
 - Group Chat
+- Stories
+- Video Sharing
+- Dark Mode
+- Message Reactions
+- Post Saving
+- User Blocking
+
+---
+
+# ⚙️ Installation
+
+Clone the repository
+
+```bash
+git clone https://github.com/Indra9555/ConnectHub.git
+```
+
+Open the project in Android Studio.
+
+Add your own Firebase configuration file:
+
+```
+app/google-services.json
+```
+
+Sync Gradle.
+
+Run the application.
+
+---
+
+# 📖 Learning Objectives
+
+This project was created to improve skills in:
+
+- Android Development
+- Java
+- Firebase
+- Cloud Firestore
+- REST APIs
+- Image Uploading
+- Real-time Applications
+- Material Design
+- Git & GitHub
+
+---
+
+# 🤝 Contributing
+
+Contributions, suggestions and feedback are always welcome.
+
+Feel free to fork the repository and submit a Pull Request.
+
+---
+
+# 📄 License
+
+This project is developed for educational and portfolio purposes.
 
 ---
 
 # 👨‍💻 Developer
 
-**Indrajett Verma**
+**Indrajeet Verma**
 
 B.Tech Computer Science Student
 
-Android Developer | Firebase | Java
+Android Developer | Java | Firebase | Cloud Computing
+
+GitHub:
+https://github.com/Indra9555
+
+---
+
+<p align="center">
+⭐ If you like this project, consider giving it a star!
+</p>
