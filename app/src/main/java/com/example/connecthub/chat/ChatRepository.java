@@ -1,8 +1,9 @@
-package com.example.connecthub.repository;
+package com.example.connecthub.chat;
 
 import com.example.connecthub.models.Message;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 public class ChatRepository {
@@ -15,13 +16,13 @@ public class ChatRepository {
 
     public void sendMessage(
             Message message,
-            OnSuccessListener<Void> success,
+            OnSuccessListener<DocumentReference> success,
             OnFailureListener failure
     ) {
 
         firestore.collection("Messages")
                 .add(message)
-                .addOnSuccessListener(documentReference -> success.onSuccess(null))
+                .addOnSuccessListener(success)
                 .addOnFailureListener(failure);
 
     }

@@ -6,8 +6,10 @@ import androidx.activity.result.contract.ActivityResultContracts;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Button;
 import android.widget.EditText;
@@ -24,11 +26,15 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.connecthub.R;
 import com.example.connecthub.adapters.MessageAdapter;
+import com.example.connecthub.chat.ChatRepository;
+import com.example.connecthub.chat.PresenceManager;
+import com.example.connecthub.chat.TypingManager;
 import com.example.connecthub.helpers.ChatHelper;
 import com.example.connecthub.models.Message;
-import com.example.connecthub.network.CloudinaryUploader;
+import com.example.connecthub.chat.ChatUploadManager;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import android.os.Handler;
@@ -51,6 +57,10 @@ public class ChatActivity extends AppCompatActivity {
                 .update("typingTo", "");
 
     };
+    private ChatRepository chatRepository;
+    private ChatUploadManager chatUploadManager;
+    private TypingManager typingManager;
+    private PresenceManager presenceManager;
     private TextView tvChatName;
     private TextView tvUserStatus;
 
@@ -68,8 +78,13 @@ public class ChatActivity extends AppCompatActivity {
     private String receiverId;
     private ImageView imgUser;
     private ImageButton btnImage;
+    private String messageId;
 
     private Uri selectedImageUri;
+    private Message replyingMessage = null;
+    private LinearLayout layoutReply;
+    private TextView tvReplySender;
+    private TextView tvReplyMessage;
 
     private final ActivityResultLauncher<String> imagePicker =
             registerForActivityResult(
@@ -88,10 +103,18 @@ public class ChatActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        chatRepository = new ChatRepository();
+        chatUploadManager = new ChatUploadManager();
+        typingManager = new TypingManager();
+        presenceManager = new PresenceManager();
+
 
         EdgeToEdge.enable(this);
 
         setContentView(R.layout.activity_chat);
+        layoutReply = findViewById(R.id.layoutReply);
+        tvReplySender = findViewById(R.id.tvReplySender);
+        tvReplyMessage = findViewById(R.id.tvReplyMessage);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (view, insets) -> {
 
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -175,9 +198,107 @@ public class ChatActivity extends AppCompatActivity {
 
         messageList = new ArrayList<>();
         adapter = new MessageAdapter(messageList);
+        adapter.setOnReplyClickListener(messageId -> {
+
+            for (int i = 0; i < messageList.size(); i++) {
+
+                if (messageList.get(i).getMessageId().equals(messageId)) {
+
+                    recyclerMessages.smoothScrollToPosition(i);
+
+                    break;
+
+                }
+
+            }
+
+        });
 
         recyclerMessages.setLayoutManager(new LinearLayoutManager(this));
         recyclerMessages.setAdapter(adapter);
+        adapter.setOnMessageLongClickListener((anchor, message) -> {
+
+            androidx.appcompat.widget.PopupMenu popupMenu =
+                    new androidx.appcompat.widget.PopupMenu(ChatActivity.this, anchor);
+
+            popupMenu.getMenuInflater().inflate(R.menu.message_menu, popupMenu.getMenu());
+
+            // Hide "Delete for everyone" if this isn't your message
+            if (!message.getSenderId().equals(auth.getCurrentUser().getUid())) {
+                popupMenu.getMenu().findItem(R.id.menu_delete_everyone).setVisible(false);
+            }
+
+            popupMenu.setOnMenuItemClickListener(item -> {
+
+                if (item.getItemId() == R.id.menu_reply) {
+
+                    replyingMessage = message;
+
+                    layoutReply.setVisibility(View.VISIBLE);
+
+                    tvReplySender.setText(
+                            message.getSenderId().equals(auth.getCurrentUser().getUid())
+                                    ? "You"
+                                    : tvChatName.getText()
+                    );
+
+                    if ("image".equals(message.getType())) {
+                        tvReplyMessage.setText("📷 Photo");
+                    } else {
+                        tvReplyMessage.setText(message.getMessage());
+                    }
+
+                    return true;
+                }
+
+                if (item.getItemId() == R.id.menu_copy) {
+
+                    android.content.ClipboardManager clipboard =
+                            (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+
+                    clipboard.setPrimaryClip(
+                            android.content.ClipData.newPlainText(
+                                    "message",
+                                    message.getMessage()
+                            )
+                    );
+
+                    Toast.makeText(this, "Copied", Toast.LENGTH_SHORT).show();
+
+                    return true;
+                }
+
+                if (item.getItemId() == R.id.menu_delete_me) {
+
+                    Toast.makeText(this,
+                            "Delete for Me will be added later",
+                            Toast.LENGTH_SHORT).show();
+
+
+                    return true;
+                }
+
+                if (item.getItemId() == R.id.menu_delete_everyone) {
+
+                    firestore.collection("Messages")
+                            .document(message.getMessageId())
+                            .update(
+                                    "deleted", true,
+                                    "message", "",
+                                    "imageUrl", "",
+                                    "type", "text"
+                            );
+
+                    return true;
+
+                }
+
+                return false;
+            });
+
+            popupMenu.show();
+
+        });
 
         loadMessages();
         loadUserStatus();
@@ -203,12 +324,42 @@ public class ChatActivity extends AppCompatActivity {
                 "text",
                 System.currentTimeMillis()
         );
+        if (replyingMessage != null) {
+
+            message.setReplyMessageId(replyingMessage.getMessageId());
+
+            if ("image".equals(replyingMessage.getType())) {
+
+                message.setReplyMessage("Photo");
+                message.setReplyImageUrl(replyingMessage.getImageUrl());
+
+            } else {
+
+                message.setReplyMessage(replyingMessage.getMessage());
+
+            }
+            message.setReplySender(
+                    replyingMessage.getSenderId().equals(senderId)
+                            ? "You"
+                            : tvChatName.getText().toString()
+            );
+
+            message.setReplyType(replyingMessage.getType());
+
+            replyingMessage = null;
+            layoutReply.setVisibility(View.GONE);
+        }
 
         firestore.collection("Messages")
                 .add(message)
                 .addOnSuccessListener(documentReference -> {
-
+                    documentReference.update(
+                            "messageId",
+                            documentReference.getId()
+                    );
                     etMessage.setText("");
+                    replyingMessage = null;
+                    layoutReply.setVisibility(View.GONE);
                     firestore.collection("Users")
                             .document(senderId)
                             .update("typingTo", "");
@@ -342,21 +493,18 @@ public class ChatActivity extends AppCompatActivity {
                 .orderBy("timestamp", Query.Direction.ASCENDING)
                 .addSnapshotListener((value, error) -> {
 
-                    if (value == null) {
-                        return;
-                    }
+                    if (value == null) return;
 
                     messageList.clear();
 
-                    value.getDocuments().forEach(document -> {
+                    for (DocumentSnapshot document : value.getDocuments()) {
 
                         Message message = document.toObject(Message.class);
 
-                        if (message == null) {
-                            return;
-                        }
+                        if (message == null) continue;
 
-                        // Mark received messages as seen
+                        message.setMessageId(document.getId());
+
                         if (message.getReceiverId().equals(senderId)
                                 && !message.isSeen()) {
 
@@ -374,9 +522,9 @@ public class ChatActivity extends AppCompatActivity {
                         if (chat1 || chat2) {
                             messageList.add(message);
                         }
+                    }
 
-                    });
-
+                    adapter.rebuildMessageMap();
                     adapter.notifyDataSetChanged();
 
                     if (!messageList.isEmpty()) {
@@ -517,12 +665,33 @@ public class ChatActivity extends AppCompatActivity {
     }
     private void uploadChatImage(Uri imageUri) {
 
-        Toast.makeText(this, "Uploading...", Toast.LENGTH_SHORT).show();
-
-        CloudinaryUploader.uploadImage(
+        ChatUploadManager.uploadImage(
                 this,
                 imageUri,
-                new CloudinaryUploader.UploadCallback() {
+                new ChatUploadManager.UploadListener() {
+
+                    @Override
+                    public void onStart() {
+
+                        String senderId = auth.getCurrentUser().getUid();
+
+                        Message tempMessage = new Message(
+                                senderId,
+                                receiverId,
+                                "",
+                                "",
+                                "image",
+                                System.currentTimeMillis()
+                        );
+
+                        tempMessage.setUploading(true);
+                        tempMessage.setLocalImageUri(imageUri);
+
+                        messageList.add(tempMessage);
+                        adapter.notifyItemInserted(messageList.size() - 1);
+                        recyclerMessages.scrollToPosition(messageList.size() - 1);
+
+                    }
 
                     @Override
                     public void onSuccess(String imageUrl) {
@@ -547,6 +716,7 @@ public class ChatActivity extends AppCompatActivity {
                                 ).show());
 
                     }
+
                 });
 
     }
@@ -562,18 +732,14 @@ public class ChatActivity extends AppCompatActivity {
                 "image",
                 System.currentTimeMillis()
         );
-
+        message.setUploading(false);
         firestore.collection("Messages")
                 .add(message)
-                .addOnSuccessListener(documentReference -> {
+                .addOnSuccessListener(documentReference -> {}
 
-                    Toast.makeText(
-                            this,
-                            "Image sent",
-                            Toast.LENGTH_SHORT
-                    ).show();
 
-                });
+
+                );
 
     }
 }

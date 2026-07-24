@@ -22,8 +22,8 @@
 
             <ImageView
                 android:id="@+id/imgUser"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
                 android:layout_marginEnd="10dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/ic_person"/>
@@ -38,8 +38,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="User"
-                    android:textSize="18sp"
-                    android:textStyle="bold"/>
+                    android:textStyle="bold"
+                    android:textSize="17sp"/>
 
                 <TextView
                     android:id="@+id/tvUserStatus"
@@ -54,17 +54,18 @@
 
     </com.google.android.material.appbar.MaterialToolbar>
 
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerMessages"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:padding="8dp"
         android:clipToPadding="false"
-
         app:layout_constraintTop_toBottomOf="@id/chatToolbar"
         app:layout_constraintBottom_toTopOf="@id/inputCard"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
+
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/inputCard"
@@ -72,50 +73,88 @@
         android:layout_height="wrap_content"
         android:layout_margin="8dp"
         app:cardCornerRadius="28dp"
-        app:cardElevation="6dp"
+        app:cardElevation="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="12dp"
-            android:paddingEnd="8dp">
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
 
-            <EditText
-                android:id="@+id/etMessage"
-                android:layout_width="0dp"
+            <!-- Reply Preview -->
+
+            <LinearLayout
+                android:id="@+id/layoutReply"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:background="@android:color/transparent"
-                android:hint="Type a message..."
-                android:imeOptions="actionSend"
-                android:inputType="textCapSentences|textMultiLine"
-                android:maxLines="5"
-                android:minHeight="48dp"/>
-            <ImageButton
-                android:id="@+id/btnImage"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_marginEnd="6dp"
-                android:background="@android:color/transparent"
-                android:contentDescription="Pick Image"
-                android:src="@drawable/ic_image"/>
-
-            <ImageButton
-                android:id="@+id/btnSend"
-                android:layout_width="40dp"
-                android:layout_height="39dp"
-                android:background="@color/purple_500"
-                android:contentDescription="Send"
-                android:foreground="@android:drawable/ic_menu_send"
+                android:orientation="vertical"
                 android:padding="10dp"
-                android:src="@drawable/ic_send" />
+                android:background="#EEEEEE"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tvReplySender"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/holo_blue_dark"
+                    android:text="You"/>
+
+                <TextView
+                    android:id="@+id/tvReplyMessage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="#444444"
+                    android:maxLines="2"/>
+
+            </LinearLayout>
+
+
+            <!-- Input Row -->
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="10dp"
+                android:paddingEnd="6dp">
+
+                <EditText
+                    android:id="@+id/etMessage"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@android:color/transparent"
+                    android:hint="Type a message..."
+                    android:maxLines="5"
+                    android:minHeight="48dp"
+                    android:imeOptions="actionSend"
+                    android:inputType="textCapSentences|textMultiLine"/>
+
+                <ImageButton
+                    android:id="@+id/btnImage"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:background="@android:color/transparent"
+                    android:src="@drawable/ic_image"
+                    android:contentDescription="Image"/>
+
+                <ImageButton
+                    android:id="@+id/btnSend"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:layout_marginStart="4dp"
+                    android:backgroundTint="@color/purple_500"
+                    android:src="@drawable/ic_send"
+                    android:contentDescription="Send"/>
+
+            </LinearLayout>
 
         </LinearLayout>
 
     </com.google.android.material.card.MaterialCardView>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

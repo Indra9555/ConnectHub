@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/menu_reply"
+        android:title="Reply"/>
+
+    <item
+        android:id="@+id/menu_copy"
+        android:title="Copy"/>
+
+    <item
+        android:id="@+id/menu_delete_me"
+        android:title="Delete for me"/>
+
+    <item
+        android:id="@+id/menu_delete_everyone"
+        android:title="Delete for everyone"/>
+
+</menu>

@@ -4,17 +4,57 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="start"
+    android:orientation="vertical"
     android:padding="8dp">
 
+    <!-- Reply Preview -->
+
+    <LinearLayout
+        android:id="@+id/layoutReplyPreview"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="#E3F2FD"
+        android:orientation="vertical"
+        android:padding="8dp"
+        android:layout_marginBottom="4dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/imgReply"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:scaleType="centerCrop"
+            android:layout_marginBottom="4dp"
+            android:visibility="gone"/>
+
+        <TextView
+            android:id="@+id/tvReplySender"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:textColor="@color/purple_500"
+            android:textSize="12sp"/>
+
+        <TextView
+            android:id="@+id/tvReplyMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="13sp"
+            android:textColor="#555"/>
+    </LinearLayout>
+
+    <!-- Image -->
 
     <ImageView
         android:id="@+id/imgMessage"
         android:layout_width="220dp"
         android:layout_height="220dp"
-        android:layout_marginBottom="4dp"
         android:adjustViewBounds="true"
         android:scaleType="centerCrop"
+        android:layout_marginBottom="4dp"
         android:visibility="gone"/>
+
+    <!-- Text -->
 
     <TextView
         android:id="@+id/tvMessage"
@@ -24,13 +64,34 @@
         android:textColor="@android:color/black"
         android:textSize="16sp"
         android:padding="12dp"
-        android:maxWidth="250dp"/>
-    <TextView
-        android:id="@+id/tvTime"
+        android:maxWidth="260dp"/>
+
+    <!-- Time -->
+
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="10sp"
-        android:textColor="#BBBBBB"
-        android:layout_marginTop="3dp"/>
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="2dp">
+
+        <TextView
+            android:id="@+id/tvTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="11sp"
+            android:textColor="#888"/>
+
+        <TextView
+            android:id="@+id/tvUploading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Uploading..."
+            android:textSize="11sp"
+            android:textColor="#FF9800"
+            android:layout_marginStart="6dp"
+            android:visibility="gone"/>
+
+    </LinearLayout>
 
 </LinearLayout>
