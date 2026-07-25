@@ -6,10 +6,14 @@ import androidx.activity.result.contract.ActivityResultContracts;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.Button;
 import android.widget.EditText;
@@ -20,6 +24,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -30,10 +35,12 @@ import com.example.connecthub.chat.ChatRepository;
 import com.example.connecthub.chat.PresenceManager;
 import com.example.connecthub.chat.TypingManager;
 import com.example.connecthub.helpers.ChatHelper;
+import com.example.connecthub.helpers.SwipeToReplyCallback;
 import com.example.connecthub.models.Message;
 import com.example.connecthub.chat.ChatUploadManager;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
@@ -42,6 +49,7 @@ import android.os.Looper;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.google.firebase.firestore.FieldValue;
 
 public class ChatActivity extends AppCompatActivity {
     private final Handler typingHandler = new Handler(Looper.getMainLooper());
@@ -198,6 +206,11 @@ public class ChatActivity extends AppCompatActivity {
 
         messageList = new ArrayList<>();
         adapter = new MessageAdapter(messageList);
+        adapter.setOnMessageDoubleTapListener(message -> {
+
+            addReaction(message, "❤️");
+
+        });
         adapter.setOnReplyClickListener(messageId -> {
 
             for (int i = 0; i < messageList.size(); i++) {
@@ -216,7 +229,42 @@ public class ChatActivity extends AppCompatActivity {
 
         recyclerMessages.setLayoutManager(new LinearLayoutManager(this));
         recyclerMessages.setAdapter(adapter);
+
+        ItemTouchHelper itemTouchHelper =
+                new ItemTouchHelper(
+                        new SwipeToReplyCallback(position -> {
+
+                            Message message = messageList.get(position);
+
+                            replyingMessage = message;
+
+                            layoutReply.setVisibility(View.VISIBLE);
+
+                            tvReplySender.setText(
+                                    message.getSenderId().equals(auth.getCurrentUser().getUid())
+                                            ? "You"
+                                            : tvChatName.getText()
+                            );
+
+                            if ("image".equals(message.getType())) {
+
+                                tvReplyMessage.setText("📷 Photo");
+
+                            } else {
+
+                                tvReplyMessage.setText(message.getMessage());
+
+                            }
+
+                            adapter.notifyItemChanged(position);
+
+                        })
+                );
+
+        itemTouchHelper.attachToRecyclerView(recyclerMessages);
+
         adapter.setOnMessageLongClickListener((anchor, message) -> {
+
 
             androidx.appcompat.widget.PopupMenu popupMenu =
                     new androidx.appcompat.widget.PopupMenu(ChatActivity.this, anchor);
@@ -229,6 +277,12 @@ public class ChatActivity extends AppCompatActivity {
             }
 
             popupMenu.setOnMenuItemClickListener(item -> {
+                if (item.getItemId() == R.id.menu_react) {
+
+                    showReactionPicker(anchor, message);
+
+                    return true;
+                }
 
                 if (item.getItemId() == R.id.menu_reply) {
 
@@ -742,4 +796,155 @@ public class ChatActivity extends AppCompatActivity {
                 );
 
     }
+    private void showReactionPicker(View anchor, Message message) {
+
+        View popupView = getLayoutInflater().inflate(
+                R.layout.reaction_popup,
+                null
+        );
+
+        PopupWindow popupWindow = new PopupWindow(
+                popupView,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                true
+        );
+
+        popupWindow.setElevation(12f);
+
+        popupView.findViewById(R.id.reactionHeart).setOnClickListener(v -> {
+            addReaction(message, "❤️");
+            popupWindow.dismiss();
+        });
+
+        popupView.findViewById(R.id.reactionLaugh).setOnClickListener(v -> {
+            addReaction(message, "😂");
+            popupWindow.dismiss();
+        });
+
+        popupView.findViewById(R.id.reactionWow).setOnClickListener(v -> {
+            addReaction(message, "😮");
+            popupWindow.dismiss();
+        });
+
+        popupView.findViewById(R.id.reactionSad).setOnClickListener(v -> {
+            addReaction(message, "😢");
+            popupWindow.dismiss();
+        });
+
+        popupView.findViewById(R.id.reactionAngry).setOnClickListener(v -> {
+            addReaction(message, "😡");
+            popupWindow.dismiss();
+        });
+
+        popupView.findViewById(R.id.reactionLike).setOnClickListener(v -> {
+            addReaction(message, "👍");
+            popupWindow.dismiss();
+        });
+
+        popupView.findViewById(R.id.reactionDislike).setOnClickListener(v -> {
+            addReaction(message, "👎");
+            popupWindow.dismiss();
+        });
+
+        popupWindow.showAsDropDown(anchor, 0, -anchor.getHeight() * 2);
+    }
+
+    private void addReaction(Message message, String emoji) {
+
+        String uid = auth.getCurrentUser().getUid();
+
+        DocumentReference messageRef = firestore
+                .collection("Messages")
+                .document(message.getMessageId());
+
+        messageRef.get().addOnSuccessListener(snapshot -> {
+
+            Message latest = snapshot.toObject(Message.class);
+
+            if (latest == null) return;
+
+            java.util.Map<String, Object> reactions = snapshot.get("reactions") instanceof java.util.Map
+                    ? (java.util.Map<String, Object>) snapshot.get("reactions")
+                    : new java.util.HashMap<>();
+
+            Object currentReaction = reactions.get(uid);
+
+            // Already reacted with ❤️ → remove it
+            if (emoji.equals(currentReaction)) {
+
+                messageRef.update(
+                        "reactions." + uid,
+                        com.google.firebase.firestore.FieldValue.delete()
+                );
+
+            } else {
+
+                // Add or change reaction
+                messageRef.update(
+                        "reactions." + uid,
+                        emoji
+                );
+
+            }
+
+        });
+
+    }
+
+    private void showReactionPopup(View anchor, Message message) {
+
+        View popupView = getLayoutInflater().inflate(
+                R.layout.reaction_popup,
+                null
+        );
+
+        PopupWindow popupWindow = new PopupWindow(
+                popupView,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                true
+        );
+
+        popupWindow.setElevation(12f);
+
+        popupView.findViewById(R.id.reactionHeart).setOnClickListener(v -> {
+            addReaction(message, "❤️");
+            popupWindow.dismiss();
+        });
+
+        popupView.findViewById(R.id.reactionLaugh).setOnClickListener(v -> {
+            addReaction(message, "😂");
+            popupWindow.dismiss();
+        });
+
+        popupView.findViewById(R.id.reactionWow).setOnClickListener(v -> {
+            addReaction(message, "😮");
+            popupWindow.dismiss();
+        });
+
+        popupView.findViewById(R.id.reactionSad).setOnClickListener(v -> {
+            addReaction(message, "😢");
+            popupWindow.dismiss();
+        });
+
+        popupView.findViewById(R.id.reactionAngry).setOnClickListener(v -> {
+            addReaction(message, "😡");
+            popupWindow.dismiss();
+        });
+
+        popupView.findViewById(R.id.reactionLike).setOnClickListener(v -> {
+            addReaction(message, "👍");
+            popupWindow.dismiss();
+        });
+
+        popupView.findViewById(R.id.reactionDislike).setOnClickListener(v -> {
+            addReaction(message, "👎");
+            popupWindow.dismiss();
+        });
+
+        popupWindow.showAsDropDown(anchor, 0, -anchor.getHeight() * 2);
+
+    }
+
 }

@@ -21,6 +21,7 @@ public class Message {
     private String replyMessageId = "";
     private String replyImageUrl = "";
     private boolean deleted = false;
+    private java.util.Map<String, String> reactions;
 
 
     public Message() {
@@ -158,4 +159,14 @@ public class Message {
     public void setDeleted(boolean deleted) {
         this.deleted = deleted;
     }
+
+    public java.util.Map<String, String> getReactions() {
+        return reactions;
+    }
+
+    public void setReactions(java.util.Map<String, String> reactions) {
+        this.reactions = reactions;
+    }
+
 }
+

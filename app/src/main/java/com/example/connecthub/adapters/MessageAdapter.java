@@ -9,6 +9,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.ImageView;
 import com.bumptech.glide.Glide;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -50,6 +52,17 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     public interface OnReplyClickListener {
         void onReplyClick(String messageId);
     }
+
+    public interface OnMessageDoubleTapListener {
+        void onDoubleTap(Message message);
+    }
+
+    private OnMessageDoubleTapListener doubleTapListener;
+
+    public void setOnMessageDoubleTapListener(OnMessageDoubleTapListener listener) {
+        this.doubleTapListener = listener;
+    }
+
     @Override
     public int getItemViewType(int position) {
 
@@ -136,6 +149,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             }
 
             bindSeen(sentHolder.tvSeen, message);
+            bindReaction(sentHolder.tvReaction, message);
 
             View target = "image".equals(message.getType())
                     ? sentHolder.imgMessage
@@ -150,6 +164,8 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 return true;
 
             });
+            attachDoubleTap(target, message);
+
         } else {
 
             ReceivedViewHolder receivedHolder = (ReceivedViewHolder) holder;
@@ -185,7 +201,9 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                         false
                 );
 
+
             }
+            bindReaction(receivedHolder.tvReaction, message);
 
             View target = "image".equals(message.getType())
                     ? receivedHolder.imgMessage
@@ -200,6 +218,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 return true;
 
             });
+            attachDoubleTap(target, message);
 
         }
 
@@ -291,8 +310,12 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
             if (isSender) {
                 tvMessage.setText("🚫 You deleted this message");
+                tvMessage.setTypeface(null, android.graphics.Typeface.ITALIC);
+                tvMessage.setTextColor(0xFF000000);
             } else {
-                tvMessage.setText("🚫 You deleted this message");
+                tvMessage.setText("🚫 This message was deleted");
+                tvMessage.setTypeface(null, android.graphics.Typeface.ITALIC);
+                tvMessage.setTextColor(0xFF000000);
             }
 
         } else {
@@ -364,6 +387,61 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         }
 
     }
+
+    private void attachDoubleTap(View target, Message message) {
+
+        GestureDetector detector = new GestureDetector(
+                target.getContext(),
+                new GestureDetector.SimpleOnGestureListener() {
+
+                    @Override
+                    public boolean onDoubleTap(MotionEvent e) {
+
+                        if (doubleTapListener != null) {
+                            doubleTapListener.onDoubleTap(message);
+                        }
+
+                        return true;
+                    }
+                });
+
+        target.setOnTouchListener((v, event) -> detector.onTouchEvent(event));
+    }
+
+
+    private void bindReaction(TextView tvReaction, Message message) {
+
+        if (message.getReactions() == null || message.getReactions().isEmpty()) {
+            tvReaction.setVisibility(View.GONE);
+            return;
+        }
+
+        java.util.LinkedHashSet<String> uniqueReactions =
+                new java.util.LinkedHashSet<>(message.getReactions().values());
+
+        StringBuilder builder = new StringBuilder();
+
+        int shown = 0;
+
+        for (String emoji : uniqueReactions) {
+
+            if (shown == 3) break;
+
+            builder.append(emoji).append(" ");
+            shown++;
+        }
+
+        if (uniqueReactions.size() > 3) {
+
+            builder.append("+")
+                    .append(uniqueReactions.size() - 3);
+
+        }
+
+        tvReaction.setText(builder.toString().trim());
+        tvReaction.setVisibility(View.VISIBLE);
+    }
+
     private void bindTime(TextView tvTime, Message message) {
 
         String time = new SimpleDateFormat(
@@ -387,6 +465,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         TextView tvReplySender;
         TextView tvReplyMessage;
         ImageView imgReply;
+        TextView tvReaction;
         public SentViewHolder(@NonNull View itemView) {
             super(itemView);
             tvMessage = itemView.findViewById(R.id.tvMessage);
@@ -398,6 +477,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             tvReplySender = itemView.findViewById(R.id.tvReplySender);
             tvReplyMessage = itemView.findViewById(R.id.tvReplyMessage);
             imgReply = itemView.findViewById(R.id.imgReply);
+            tvReaction = itemView.findViewById(R.id.tvReaction);
         }
     }
 
@@ -413,6 +493,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         TextView tvReplySender;
         TextView tvReplyMessage;
         ImageView imgReply;
+        TextView tvReaction;
 
         public ReceivedViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -424,6 +505,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             tvReplySender = itemView.findViewById(R.id.tvReplySender);
             tvReplyMessage = itemView.findViewById(R.id.tvReplyMessage);
             imgReply = itemView.findViewById(R.id.imgReply);
+            tvReaction = itemView.findViewById(R.id.tvReaction);
         }
     }
 }
