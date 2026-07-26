@@ -6,11 +6,17 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.ImageView;
 import com.bumptech.glide.Glide;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.media.MediaPlayer;
+import android.media.AudioAttributes;
+import java.io.IOException;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -19,6 +25,7 @@ import com.example.connecthub.R;
 import com.example.connecthub.activities.ImageViewerActivity;
 import com.example.connecthub.models.Message;
 import com.google.firebase.auth.FirebaseAuth;
+import com.masoudss.lib.WaveformSeekBar;
 
 import java.util.List;
 import java.text.SimpleDateFormat;
@@ -28,10 +35,14 @@ import android.net.Uri;
 
 public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
+
+    private MediaPlayer currentPlayer;
+    private String currentPlayingMessageId = "";
     private static final int SENT = 1;
     private static final int RECEIVED = 2;
 
     private final List<Message> messageList;
+    private int lastAnimatedPosition = -1;
     private final java.util.HashMap<String, Message> messageMap = new java.util.HashMap<>();
 
     public MessageAdapter(List<Message> messageList) {
@@ -98,24 +109,20 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     }
 
     @Override
-    public void onBindViewHolder(
-            @NonNull RecyclerView.ViewHolder holder,
-            int position) {
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
 
         Message message = messageList.get(position);
 
-
-
-        String time = new SimpleDateFormat(
-                "hh:mm a",
-                Locale.getDefault()
-        ).format(new Date(message.getTimestamp()));
+        bindTime(
+                holder instanceof SentViewHolder
+                        ? ((SentViewHolder) holder).tvTime
+                        : ((ReceivedViewHolder) holder).tvTime,
+                message
+        );
 
         if (holder instanceof SentViewHolder) {
 
             SentViewHolder sentHolder = (SentViewHolder) holder;
-
-            bindTime(sentHolder.tvTime, message);
 
             bindReplyPreview(
                     sentHolder.layoutReplyPreview,
@@ -136,16 +143,26 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                         sentHolder.itemView
                 );
 
+                sentHolder.layoutVoice.setVisibility(View.GONE);
+                sentHolder.tvMessage.setVisibility(View.GONE);
+
+            } else if ("voice".equals(message.getType())) {
+
+                sentHolder.imgMessage.setVisibility(View.GONE);
+                sentHolder.tvMessage.setVisibility(View.GONE);
+                bindVoiceMessage(
+                        sentHolder.layoutVoice,
+                        sentHolder.btnVoicePlay,
+                        sentHolder.waveformSeekBar,
+                        sentHolder.tvVoiceDuration,
+                        message
+                );
+
             } else {
 
                 sentHolder.imgMessage.setVisibility(View.GONE);
-
-                bindTextMessage(
-                        sentHolder.tvMessage,
-                        message,
-                        true
-                );
-
+                sentHolder.layoutVoice.setVisibility(View.GONE);
+                bindTextMessage(sentHolder.tvMessage, message, true);
             }
 
             bindSeen(sentHolder.tvSeen, message);
@@ -156,21 +173,15 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                     : sentHolder.tvMessage;
 
             target.setOnLongClickListener(v -> {
-
-                if (listener != null) {
-                    listener.onMessageLongClick(v, message);
-                }
-
+                if (listener != null) listener.onMessageLongClick(v, message);
                 return true;
-
             });
+
             attachDoubleTap(target, message);
 
         } else {
 
             ReceivedViewHolder receivedHolder = (ReceivedViewHolder) holder;
-
-            bindTime(receivedHolder.tvTime, message);
 
             bindReplyPreview(
                     receivedHolder.layoutReplyPreview,
@@ -191,18 +202,28 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                         receivedHolder.itemView
                 );
 
+                receivedHolder.layoutVoice.setVisibility(View.GONE);
+                receivedHolder.tvMessage.setVisibility(View.GONE);
+
+            } else if ("voice".equals(message.getType())) {
+
+                receivedHolder.imgMessage.setVisibility(View.GONE);
+                receivedHolder.tvMessage.setVisibility(View.GONE);
+                bindVoiceMessage(
+                        receivedHolder.layoutVoice,
+                        receivedHolder.btnVoicePlay,
+                        receivedHolder.waveformSeekBar,
+                        receivedHolder.tvVoiceDuration,
+                        message
+                );
+
             } else {
 
                 receivedHolder.imgMessage.setVisibility(View.GONE);
-
-                bindTextMessage(
-                        receivedHolder.tvMessage,
-                        message,
-                        false
-                );
-
-
+                receivedHolder.layoutVoice.setVisibility(View.GONE);
+                bindTextMessage(receivedHolder.tvMessage, message, false);
             }
+
             bindReaction(receivedHolder.tvReaction, message);
 
             View target = "image".equals(message.getType())
@@ -210,18 +231,23 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                     : receivedHolder.tvMessage;
 
             target.setOnLongClickListener(v -> {
-
-                if (listener != null) {
-                    listener.onMessageLongClick(v, message);
-                }
-
+                if (listener != null) listener.onMessageLongClick(v, message);
                 return true;
-
             });
-            attachDoubleTap(target, message);
 
+            attachDoubleTap(target, message);
         }
 
+        if (position > lastAnimatedPosition) {
+            Animation animation = AnimationUtils.loadAnimation(
+                    holder.itemView.getContext(),
+                    holder instanceof SentViewHolder
+                            ? R.anim.slide_in_right
+                            : R.anim.slide_in_left
+            );
+            holder.itemView.startAnimation(animation);
+            lastAnimatedPosition = position;
+        }
     }
     public void rebuildMessageMap() {
 
@@ -233,6 +259,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         }
 
     }
+
 
     @Override
     public int getItemCount() {
@@ -310,11 +337,11 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
             if (isSender) {
                 tvMessage.setText("🚫 You deleted this message");
-                tvMessage.setTypeface(null, android.graphics.Typeface.ITALIC);
+
                 tvMessage.setTextColor(0xFF000000);
             } else {
                 tvMessage.setText("🚫 This message was deleted");
-                tvMessage.setTypeface(null, android.graphics.Typeface.ITALIC);
+
                 tvMessage.setTextColor(0xFF000000);
             }
 
@@ -439,7 +466,19 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         }
 
         tvReaction.setText(builder.toString().trim());
-        tvReaction.setVisibility(View.VISIBLE);
+
+        if (tvReaction.getVisibility() != View.VISIBLE) {
+
+            tvReaction.setVisibility(View.VISIBLE);
+
+            Animation pop = AnimationUtils.loadAnimation(
+                    tvReaction.getContext(),
+                    R.anim.pop
+            );
+
+            tvReaction.startAnimation(pop);
+
+        }
     }
 
     private void bindTime(TextView tvTime, Message message) {
@@ -466,6 +505,10 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         TextView tvReplyMessage;
         ImageView imgReply;
         TextView tvReaction;
+        LinearLayout layoutVoice;
+        TextView btnVoicePlay;
+        TextView tvVoiceDuration;
+        WaveformSeekBar waveformSeekBar;
         public SentViewHolder(@NonNull View itemView) {
             super(itemView);
             tvMessage = itemView.findViewById(R.id.tvMessage);
@@ -478,6 +521,11 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             tvReplyMessage = itemView.findViewById(R.id.tvReplyMessage);
             imgReply = itemView.findViewById(R.id.imgReply);
             tvReaction = itemView.findViewById(R.id.tvReaction);
+            layoutVoice = itemView.findViewById(R.id.layoutVoice);
+            btnVoicePlay = itemView.findViewById(R.id.btnVoicePlay);
+            tvVoiceDuration = itemView.findViewById(R.id.tvVoiceDuration);
+            waveformSeekBar =
+                    itemView.findViewById(R.id.waveformSeekBar);
         }
     }
 
@@ -494,7 +542,10 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         TextView tvReplyMessage;
         ImageView imgReply;
         TextView tvReaction;
-
+        LinearLayout layoutVoice;
+        TextView btnVoicePlay;
+        TextView tvVoiceDuration;
+        WaveformSeekBar waveformSeekBar;
         public ReceivedViewHolder(@NonNull View itemView) {
             super(itemView);
             tvMessage = itemView.findViewById(R.id.tvMessage);
@@ -506,6 +557,227 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             tvReplyMessage = itemView.findViewById(R.id.tvReplyMessage);
             imgReply = itemView.findViewById(R.id.imgReply);
             tvReaction = itemView.findViewById(R.id.tvReaction);
+            layoutVoice = itemView.findViewById(R.id.layoutVoice);
+            btnVoicePlay = itemView.findViewById(R.id.btnVoicePlay);
+            tvVoiceDuration = itemView.findViewById(R.id.tvVoiceDuration);
+            waveformSeekBar =
+                    itemView.findViewById(R.id.waveformSeekBar);
+
         }
+    }
+    private void bindVoiceMessage(
+            LinearLayout layoutVoice,
+            TextView btnVoicePlay,
+            WaveformSeekBar waveformSeekBar,
+            TextView tvVoiceDuration,
+            Message message
+    ) {
+
+        layoutVoice.setVisibility(View.VISIBLE);
+
+        tvVoiceDuration.setText(formatVoiceDuration(message.getVoiceDuration()));
+
+        if (message.getWaveform() != null &&
+                !message.getWaveform().isEmpty()) {
+
+            int[] samples = new int[message.getWaveform().size()];
+
+            for (int i = 0; i < samples.length; i++) {
+                samples[i] = message.getWaveform().get(i);
+            }
+
+            waveformSeekBar.setSampleFrom(samples);
+        }
+
+        boolean isPlaying =
+                message.getMessageId().equals(currentPlayingMessageId)
+                        && currentPlayer != null
+                        && currentPlayer.isPlaying();
+
+        btnVoicePlay.setText(isPlaying ? "⏸" : "▶");
+
+        btnVoicePlay.setOnClickListener(v -> {
+
+            if (message.getVoiceUrl() == null
+                    || message.getVoiceUrl().isEmpty()) {
+                return;
+            }
+
+            // Resume
+            if (currentPlayer != null
+                    && message.getMessageId().equals(currentPlayingMessageId)
+                    && !currentPlayer.isPlaying()) {
+
+                currentPlayer.start();
+
+                btnVoicePlay.setText("⏸");
+
+                updateWaveform(
+                        currentPlayer,
+                        waveformSeekBar,
+                        tvVoiceDuration
+                );
+
+                return;
+            }
+
+            // Pause
+            if (currentPlayer != null
+                    && message.getMessageId().equals(currentPlayingMessageId)
+                    && currentPlayer.isPlaying()) {
+
+                currentPlayer.pause();
+
+                btnVoicePlay.setText("▶");
+
+                return;
+            }
+
+            stopCurrentPlayback();
+
+            playVoice(
+                    message.getVoiceUrl(),
+                    btnVoicePlay,
+                    waveformSeekBar,
+                    tvVoiceDuration,
+                    message.getMessageId()
+            );
+
+        });
+
+    }
+
+    private void playVoice(
+            String url,
+            TextView btnVoicePlay,
+            WaveformSeekBar waveformSeekBar,
+            TextView tvVoiceDuration,
+            String messageId
+    ) {
+        try {
+            MediaPlayer player = new MediaPlayer();
+            player.setAudioAttributes(
+                    new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .build()
+            );
+            player.setDataSource(url);
+
+            player.setOnPreparedListener(mp -> {
+                currentPlayer = mp;
+                currentPlayingMessageId = messageId;
+
+                waveformSeekBar.setMaxProgress(mp.getDuration());
+
+                mp.start();
+
+                btnVoicePlay.setText("⏸");
+
+                updateWaveform(
+                        mp,
+                        waveformSeekBar,
+                        tvVoiceDuration
+                );
+            });
+
+            player.setOnCompletionListener(mp -> {
+
+                btnVoicePlay.setText("▶");
+
+                waveformSeekBar.setProgress(0);
+
+                tvVoiceDuration.setText(
+                        "0:00 / " + formatVoiceDuration(mp.getDuration())
+                );
+
+                stopCurrentPlayback();
+
+            });
+
+            player.setOnErrorListener((mp, what, extra) -> {
+                stopCurrentPlayback();
+                return true;
+            });
+
+            player.prepareAsync();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void stopCurrentPlayback() {
+        try {
+            if (currentPlayer != null) {
+                if (currentPlayer.isPlaying()) {
+                    currentPlayer.stop();
+                }
+                currentPlayer.reset();
+                currentPlayer.release();
+            }
+        } catch (Exception ignored) {
+        }
+        currentPlayer = null;
+        currentPlayingMessageId = "";
+    }
+
+    private String formatVoiceDuration(long durationMs) {
+        long seconds = durationMs / 1000;
+        long minutes = seconds / 60;
+        seconds = seconds % 60;
+        return String.format(java.util.Locale.getDefault(), "%d:%02d", minutes, seconds);
+    }
+    private void updateWaveform(
+            MediaPlayer player,
+            WaveformSeekBar waveformSeekBar,
+            TextView duration
+    ) {
+
+        waveformSeekBar.setProgress(player.getCurrentPosition());
+
+        duration.setText(
+                formatVoiceDuration(player.getCurrentPosition())
+                        + " / "
+                        + formatVoiceDuration(player.getDuration())
+        );
+
+        waveformSeekBar.postDelayed(new Runnable() {
+
+            @Override
+            public void run() {
+
+                try {
+
+                    if (player != null
+                            && currentPlayer == player
+                            && player.isPlaying()) {
+
+                        waveformSeekBar.setProgress(player.getCurrentPosition());
+
+                        duration.setText(
+                                formatVoiceDuration(player.getCurrentPosition())
+                                        + " / "
+                                        + formatVoiceDuration(player.getDuration())
+                        );
+
+                        waveformSeekBar.postDelayed(this, 200);
+
+                    }
+
+                } catch (IllegalStateException ignored) {
+                    // MediaPlayer was released
+                }
+            }
+
+        }, 200);
+
+        waveformSeekBar.setOnProgressChanged((waveformSeekBar1, progress, fromUser) -> {
+
+            if (fromUser && player != null) {
+                player.seekTo((int) progress);
+            }
+
+        });
     }
 }

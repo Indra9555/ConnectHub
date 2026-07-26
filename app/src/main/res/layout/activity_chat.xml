@@ -143,6 +143,14 @@
                     android:contentDescription="Image"/>
 
                 <ImageButton
+                    android:id="@+id/btnMic"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Record voice"
+                    android:src="@android:drawable/ic_btn_speak_now" />
+
+                <ImageButton
                     android:id="@+id/btnSend"
                     android:layout_width="42dp"
                     android:layout_height="42dp"
@@ -150,6 +158,7 @@
                     android:backgroundTint="@color/purple_500"
                     android:src="@drawable/ic_send"
                     android:contentDescription="Send"/>
+
 
             </LinearLayout>
 

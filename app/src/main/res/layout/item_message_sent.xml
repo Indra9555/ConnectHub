@@ -8,21 +8,52 @@
     android:paddingHorizontal="8dp"
     android:paddingVertical="4dp">
 
-    <!-- Whole Bubble -->
     <LinearLayout
         android:id="@+id/layoutBubble"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end"
         android:orientation="vertical"
-        android:maxWidth="300dp"
         android:background="@drawable/bg_message_sent"
+        android:maxWidth="280dp"
         android:padding="10dp">
 
-        <!-- Reply Preview -->
+        <LinearLayout
+            android:id="@+id/layoutVoice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:visibility="gone"
+            android:layout_marginBottom="4dp">
+
+            <TextView
+                android:id="@+id/btnVoicePlay"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:gravity="center"
+                android:text="▶"
+                android:textSize="18sp"
+                android:textStyle="bold"/>
+
+
+            <com.masoudss.lib.WaveformSeekBar
+                android:id="@+id/waveformSeekBar"
+                android:layout_width="170dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"/>
+
+            <TextView
+                android:id="@+id/tvVoiceDuration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0:00"
+                android:textSize="12sp"/>
+        </LinearLayout>
+
         <LinearLayout
             android:id="@+id/layoutReplyPreview"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="6dp"
             android:background="@drawable/bg_reply_preview"
@@ -36,7 +67,7 @@
                 android:layout_height="45dp"
                 android:layout_marginBottom="4dp"
                 android:scaleType="centerCrop"
-                android:visibility="gone"/>
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/tvReplySender"
@@ -44,7 +75,7 @@
                 android:layout_height="wrap_content"
                 android:textColor="@color/purple_500"
                 android:textSize="11sp"
-                android:textStyle="bold"/>
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tvReplyMessage"
@@ -53,30 +84,26 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="#666666"
-                android:textSize="13sp"/>
-
+                android:textSize="13sp" />
         </LinearLayout>
 
-        <!-- Image -->
         <ImageView
             android:id="@+id/imgMessage"
             android:layout_width="220dp"
             android:layout_height="220dp"
-            android:layout_marginBottom="4dp"
+            android:layout_marginBottom="6dp"
             android:adjustViewBounds="true"
             android:scaleType="centerCrop"
-            android:visibility="gone"/>
+            android:visibility="gone" />
 
-        <!-- Text -->
         <TextView
             android:id="@+id/tvMessage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxWidth="260dp"
             android:textColor="@android:color/black"
-            android:textSize="16sp"/>
+            android:textSize="16sp" />
 
-        <!-- Uploading -->
         <TextView
             android:id="@+id/tvUploading"
             android:layout_width="wrap_content"
@@ -85,37 +112,35 @@
             android:text="Uploading..."
             android:textColor="#FF9800"
             android:textSize="11sp"
-            android:visibility="gone"/>
+            android:visibility="gone" />
 
-        <!-- Time + Seen -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:gravity="end|center_vertical"
-            android:orientation="horizontal">
+            android:layout_gravity="end"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
             <TextView
                 android:id="@+id/tvTime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="#777777"
-                android:textSize="11sp"/>
+                android:textSize="11sp" />
 
             <TextView
                 android:id="@+id/tvSeen"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
+                android:layout_marginStart="3dp"
                 android:text="✓"
                 android:textColor="#2196F3"
-                android:textSize="11sp"/>
-
+                android:textSize="11sp" />
         </LinearLayout>
 
     </LinearLayout>
 
-    <!-- Reaction Chip -->
     <TextView
         android:id="@+id/tvReaction"
         android:layout_width="wrap_content"
@@ -132,6 +157,6 @@
         android:textColor="#000000"
         android:textSize="15sp"
         android:textStyle="bold"
-        android:visibility="gone"/>
+        android:visibility="gone" />
 
 </LinearLayout>

@@ -21,7 +21,10 @@ public class Message {
     private String replyMessageId = "";
     private String replyImageUrl = "";
     private boolean deleted = false;
+    private String voiceUrl = "";
+    private long voiceDuration = 0;
     private java.util.Map<String, String> reactions;
+    private java.util.List<Integer> waveform;
 
 
     public Message() {
@@ -167,6 +170,26 @@ public class Message {
     public void setReactions(java.util.Map<String, String> reactions) {
         this.reactions = reactions;
     }
+    public String getVoiceUrl() {
+        return voiceUrl;
+    }
 
+    public void setVoiceUrl(String voiceUrl) {
+        this.voiceUrl = voiceUrl;
+    }
+
+    public long getVoiceDuration() {
+        return voiceDuration;
+    }
+
+    public void setVoiceDuration(long voiceDuration) {
+        this.voiceDuration = voiceDuration;
+    }
+    public java.util.List<Integer> getWaveform() {
+        return waveform;
+    }
+    public void setWaveform(java.util.List<Integer> waveform) {
+        this.waveform = waveform;
+    }
 }
 

@@ -19,6 +19,17 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.media.MediaRecorder;
+import android.os.Build;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.core.content.ContextCompat;
+import java.io.File;
+import com.example.connecthub.chat.VoiceUploadManager;
+
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
@@ -34,6 +45,7 @@ import com.example.connecthub.adapters.MessageAdapter;
 import com.example.connecthub.chat.ChatRepository;
 import com.example.connecthub.chat.PresenceManager;
 import com.example.connecthub.chat.TypingManager;
+import com.example.connecthub.chat.WaveformGenerator;
 import com.example.connecthub.helpers.ChatHelper;
 import com.example.connecthub.helpers.SwipeToReplyCallback;
 import com.example.connecthub.models.Message;
@@ -93,6 +105,20 @@ public class ChatActivity extends AppCompatActivity {
     private LinearLayout layoutReply;
     private TextView tvReplySender;
     private TextView tvReplyMessage;
+
+    private ImageButton btnMic;
+    private MediaRecorder mediaRecorder;
+    private File voiceFile;
+    private boolean isRecordingVoice = false;
+    private long voiceStartTime = 0L;
+    private final ActivityResultLauncher<String> audioPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+                if (granted) {
+                    startVoiceRecording();
+                } else {
+                    Toast.makeText(this, "Microphone permission denied", Toast.LENGTH_SHORT).show();
+                }
+            });
 
     private final ActivityResultLauncher<String> imagePicker =
             registerForActivityResult(
@@ -247,13 +273,11 @@ public class ChatActivity extends AppCompatActivity {
                             );
 
                             if ("image".equals(message.getType())) {
-
                                 tvReplyMessage.setText("📷 Photo");
-
+                            } else if ("voice".equals(message.getType())) {
+                                tvReplyMessage.setText("🎤 Voice message");
                             } else {
-
                                 tvReplyMessage.setText(message.getMessage());
-
                             }
 
                             adapter.notifyItemChanged(position);
@@ -298,6 +322,8 @@ public class ChatActivity extends AppCompatActivity {
 
                     if ("image".equals(message.getType())) {
                         tvReplyMessage.setText("📷 Photo");
+                    } else if ("voice".equals(message.getType())) {
+                        tvReplyMessage.setText("🎤 Voice message");
                     } else {
                         tvReplyMessage.setText(message.getMessage());
                     }
@@ -356,6 +382,26 @@ public class ChatActivity extends AppCompatActivity {
 
         loadMessages();
         loadUserStatus();
+        btnMic = findViewById(R.id.btnMic);
+
+        btnMic.setOnTouchListener((v, event) -> {
+            switch (event.getAction()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                            == PackageManager.PERMISSION_GRANTED) {
+                        startVoiceRecording();
+                    } else {
+                        audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+                    }
+                    return true;
+
+                case android.view.MotionEvent.ACTION_UP:
+                case android.view.MotionEvent.ACTION_CANCEL:
+                    stopVoiceRecording();
+                    return true;
+            }
+            return false;
+        });
 
         btnSend.setOnClickListener(v -> sendMessage());
     }
@@ -945,6 +991,159 @@ public class ChatActivity extends AppCompatActivity {
 
         popupWindow.showAsDropDown(anchor, 0, -anchor.getHeight() * 2);
 
+    }
+    private void startVoiceRecording() {
+        if (isRecordingVoice) return;
+
+        try {
+            voiceFile = new File(getCacheDir(), "voice_" + System.currentTimeMillis() + ".m4a");
+
+            mediaRecorder = new MediaRecorder();
+            mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+            mediaRecorder.setAudioEncodingBitRate(128000);
+            mediaRecorder.setAudioSamplingRate(44100);
+            mediaRecorder.setOutputFile(voiceFile.getAbsolutePath());
+            mediaRecorder.prepare();
+            mediaRecorder.start();
+
+            isRecordingVoice = true;
+            voiceStartTime = System.currentTimeMillis();
+
+            Toast.makeText(this, "Recording...", Toast.LENGTH_SHORT).show();
+
+        } catch (Exception e) {
+            isRecordingVoice = false;
+            releaseVoiceRecorder();
+            Toast.makeText(this, "Recording failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void stopVoiceRecording() {
+        if (!isRecordingVoice) return;
+
+        long duration = System.currentTimeMillis() - voiceStartTime;
+        isRecordingVoice = false;
+
+        try {
+            mediaRecorder.stop();
+        } catch (Exception ignored) {
+            if (voiceFile != null && voiceFile.exists()) {
+                voiceFile.delete();
+            }
+            releaseVoiceRecorder();
+            return;
+        }
+
+        releaseVoiceRecorder();
+
+        if (voiceFile == null || !voiceFile.exists()) {
+            return;
+        }
+
+        if (duration < 800) {
+            voiceFile.delete();
+            Toast.makeText(this, "Voice message too short", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        uploadVoiceMessage(voiceFile, duration);
+    }
+
+    private void releaseVoiceRecorder() {
+        try {
+            if (mediaRecorder != null) {
+                mediaRecorder.reset();
+                mediaRecorder.release();
+            }
+        } catch (Exception ignored) {
+        }
+        mediaRecorder = null;
+    }
+    private void uploadVoiceMessage(File file, long durationMs) {
+        VoiceUploadManager.uploadVoice(file, new VoiceUploadManager.UploadListener() {
+            @Override
+            public void onStart() {
+                runOnUiThread(() ->
+                        Toast.makeText(ChatActivity.this, "Uploading voice...", Toast.LENGTH_SHORT).show()
+                );
+            }
+
+            @Override
+            public void onSuccess(String voiceUrl) {
+                runOnUiThread(() -> sendVoiceMessage(file, voiceUrl, durationMs));
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                runOnUiThread(() ->
+                        Toast.makeText(ChatActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show()
+                );
+            }
+        });
+    }
+
+    private void sendVoiceMessage(
+            File voiceFile,
+            String voiceUrl,
+            long durationMs
+    ) {
+        String senderId = auth.getCurrentUser().getUid();
+
+        Message message = new Message(
+                senderId,
+                receiverId,
+                "",
+                "",
+                "voice",
+                System.currentTimeMillis()
+        );
+
+        message.setVoiceUrl(voiceUrl);
+        message.setVoiceDuration(durationMs);
+        message.setWaveform(
+                WaveformGenerator.generate(voiceFile)
+        );
+        message.setUploading(false);
+
+        firestore.collection("Messages")
+                .add(message)
+                .addOnSuccessListener(documentReference -> {
+                    documentReference.update("messageId", documentReference.getId());
+
+                    firestore.collection("Users")
+                            .document(senderId)
+                            .update("typingTo", "");
+
+                    firestore.collection("Users")
+                            .document(senderId)
+                            .get()
+                            .addOnSuccessListener(senderDoc -> {
+                                firestore.collection("Users")
+                                        .document(receiverId)
+                                        .get()
+                                        .addOnSuccessListener(receiverDoc -> {
+                                            String chatId = ChatHelper.getChatId(senderId, receiverId);
+
+                                            java.util.Map<String, Object> chatMap = new java.util.HashMap<>();
+                                            chatMap.put("senderId", senderId);
+                                            chatMap.put("receiverId", receiverId);
+                                            chatMap.put("senderName", senderDoc.getString("name"));
+                                            chatMap.put("receiverName", receiverDoc.getString("name"));
+                                            chatMap.put("senderImage", senderDoc.getString("image"));
+                                            chatMap.put("receiverImage", receiverDoc.getString("image"));
+                                            chatMap.put("lastMessage", "🎤 Voice message");
+                                            chatMap.put("lastTimestamp", System.currentTimeMillis());
+                                            chatMap.put("senderUnread", 0);
+                                            chatMap.put("receiverUnread", 1);
+
+                                            firestore.collection("Chats")
+                                                    .document(chatId)
+                                                    .set(chatMap);
+                                        });
+                            });
+                });
     }
 
 }
