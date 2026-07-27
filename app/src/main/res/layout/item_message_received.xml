@@ -22,33 +22,70 @@
             android:id="@+id/layoutVoice"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:layout_marginBottom="4dp"
             android:gravity="center_vertical"
-            android:visibility="gone"
-            android:layout_marginBottom="4dp">
+            android:orientation="horizontal"
+            android:visibility="gone">
 
+            <!-- Play Button -->
             <TextView
                 android:id="@+id/btnVoicePlay"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
                 android:gravity="center"
                 android:text="▶"
+                android:textColor="@android:color/black"
                 android:textSize="18sp"
-                android:textStyle="bold"/>
+                android:textStyle="bold" />
 
-            <com.masoudss.lib.WaveformSeekBar
-                android:id="@+id/waveformSeekBar"
-                android:layout_width="170dp"
-                android:layout_height="40dp"
-                android:layout_marginStart="8dp"/>
-
-
-            <TextView
-                android:id="@+id/tvVoiceDuration"
-                android:layout_width="wrap_content"
+            <!-- Right Side -->
+            <LinearLayout
+                android:layout_width="190dp"
                 android:layout_height="wrap_content"
-                android:text="0:00"
-                android:textSize="12sp"/>
+                android:layout_marginStart="8dp"
+                android:orientation="vertical">
+
+                <!-- Waveform -->
+                <com.masoudss.lib.WaveformSeekBar
+                    android:id="@+id/waveformSeekBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="42dp" />
+
+                <!-- Duration + Speed -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tvVoiceDuration"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="0:00 / 0:00"
+                        android:textColor="#666666"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tvSpeed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_reaction_chip"
+                        android:paddingStart="8dp"
+                        android:paddingTop="2dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="2dp"
+                        android:text="1×"
+                        android:textColor="@android:color/black"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
         </LinearLayout>
 
         <LinearLayout

@@ -37,6 +37,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
 
     private MediaPlayer currentPlayer;
+    private float playbackSpeed = 1.0f;
     private String currentPlayingMessageId = "";
     private static final int SENT = 1;
     private static final int RECEIVED = 2;
@@ -155,6 +156,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                         sentHolder.btnVoicePlay,
                         sentHolder.waveformSeekBar,
                         sentHolder.tvVoiceDuration,
+                        sentHolder.tvSpeed,
                         message
                 );
 
@@ -214,6 +216,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                         receivedHolder.btnVoicePlay,
                         receivedHolder.waveformSeekBar,
                         receivedHolder.tvVoiceDuration,
+                        receivedHolder.tvSpeed,
                         message
                 );
 
@@ -509,6 +512,8 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         TextView btnVoicePlay;
         TextView tvVoiceDuration;
         WaveformSeekBar waveformSeekBar;
+        TextView tvSpeed;
+
         public SentViewHolder(@NonNull View itemView) {
             super(itemView);
             tvMessage = itemView.findViewById(R.id.tvMessage);
@@ -526,6 +531,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             tvVoiceDuration = itemView.findViewById(R.id.tvVoiceDuration);
             waveformSeekBar =
                     itemView.findViewById(R.id.waveformSeekBar);
+            tvSpeed = itemView.findViewById(R.id.tvSpeed);
         }
     }
 
@@ -546,6 +552,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         TextView btnVoicePlay;
         TextView tvVoiceDuration;
         WaveformSeekBar waveformSeekBar;
+        TextView tvSpeed;
         public ReceivedViewHolder(@NonNull View itemView) {
             super(itemView);
             tvMessage = itemView.findViewById(R.id.tvMessage);
@@ -562,6 +569,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             tvVoiceDuration = itemView.findViewById(R.id.tvVoiceDuration);
             waveformSeekBar =
                     itemView.findViewById(R.id.waveformSeekBar);
+            tvSpeed = itemView.findViewById(R.id.tvSpeed);
 
         }
     }
@@ -570,8 +578,9 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             TextView btnVoicePlay,
             WaveformSeekBar waveformSeekBar,
             TextView tvVoiceDuration,
+            TextView tvSpeed,
             Message message
-    ) {
+    ){
 
         layoutVoice.setVisibility(View.VISIBLE);
 
@@ -642,6 +651,26 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                     tvVoiceDuration,
                     message.getMessageId()
             );
+
+        });
+        tvSpeed.setOnClickListener(v -> {
+
+            if (playbackSpeed == 1.0f) {
+                playbackSpeed = 1.5f;
+            } else if (playbackSpeed == 1.5f) {
+                playbackSpeed = 2.0f;
+            } else {
+                playbackSpeed = 1.0f;
+            }
+
+            tvSpeed.setText(playbackSpeed + "×");
+
+            if (currentPlayer != null) {
+                currentPlayer.setPlaybackParams(
+                        currentPlayer.getPlaybackParams()
+                                .setSpeed(playbackSpeed)
+                );
+            }
 
         });
 
