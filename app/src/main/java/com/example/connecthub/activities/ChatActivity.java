@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 
 import android.annotation.SuppressLint;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
