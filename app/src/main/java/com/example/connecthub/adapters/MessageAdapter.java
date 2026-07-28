@@ -653,6 +653,23 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             );
 
         });
+        waveformSeekBar.setOnProgressChanged(
+                (waveformSeekBar1, progress, fromUser) -> {
+
+                    if (fromUser
+                            && currentPlayer != null
+                            && message.getMessageId().equals(currentPlayingMessageId)) {
+
+                        currentPlayer.seekTo((int) progress);
+
+                        tvVoiceDuration.setText(
+                                formatVoiceDuration((long) progress)
+                                        + " / "
+                                        + formatVoiceDuration(currentPlayer.getDuration())
+                        );
+                    }
+                }
+        );
         tvSpeed.setOnClickListener(v -> {
 
             if (playbackSpeed == 1.0f) {
@@ -698,6 +715,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 currentPlayingMessageId = messageId;
 
                 waveformSeekBar.setMaxProgress(mp.getDuration());
+                waveformSeekBar.setProgress(0);
 
                 mp.start();
 
@@ -717,9 +735,9 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 waveformSeekBar.setProgress(0);
 
                 tvVoiceDuration.setText(
-                        "0:00 / " + formatVoiceDuration(mp.getDuration())
+                        "0:00 / "
+                                + formatVoiceDuration(player.getDuration())
                 );
-
                 stopCurrentPlayback();
 
             });
