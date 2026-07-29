@@ -732,13 +732,17 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
                 btnVoicePlay.setText("▶");
 
+                player.seekTo(0);
+
                 waveformSeekBar.setProgress(0);
 
                 tvVoiceDuration.setText(
                         "0:00 / "
                                 + formatVoiceDuration(player.getDuration())
                 );
-                stopCurrentPlayback();
+
+                // Don't release the player here.
+                currentPlayingMessageId = "";
 
             });
 

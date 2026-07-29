@@ -68,6 +68,12 @@ import com.google.firebase.firestore.FieldValue;
 
 public class ChatActivity extends AppCompatActivity {
     private final Handler typingHandler = new Handler(Looper.getMainLooper());
+    private Handler recordingHandler = new Handler(Looper.getMainLooper());
+
+    private Runnable recordingRunnable;
+
+    private float startX;
+    private boolean cancelRecording = false;
 
     private final Runnable stopTypingRunnable = () -> {
 
@@ -93,7 +99,12 @@ public class ChatActivity extends AppCompatActivity {
     private ImageButton btnSend;
 
     private List<Message> messageList;
-    private MessageAdapter adapter;
+    private MessageAdapter adapter;private LinearLayout layoutInput;
+    private LinearLayout layoutRecording;
+
+    private TextView tvRecordingTime;
+    private TextView tvSlideCancel;
+
 
     private FirebaseFirestore firestore;
     private FirebaseAuth auth;
@@ -137,6 +148,7 @@ public class ChatActivity extends AppCompatActivity {
                         }
 
                     });
+    @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -146,9 +158,16 @@ public class ChatActivity extends AppCompatActivity {
         presenceManager = new PresenceManager();
 
 
+
         EdgeToEdge.enable(this);
 
+
         setContentView(R.layout.activity_chat);
+        layoutInput = findViewById(R.id.layoutInput);
+        layoutRecording = findViewById(R.id.layoutRecording);
+
+        tvRecordingTime = findViewById(R.id.tvRecordingTime);
+        tvSlideCancel = findViewById(R.id.tvSlideCancel);
         layoutReply = findViewById(R.id.layoutReply);
         tvReplySender = findViewById(R.id.tvReplySender);
         tvReplyMessage = findViewById(R.id.tvReplyMessage);
@@ -256,8 +275,24 @@ public class ChatActivity extends AppCompatActivity {
 
         });
 
-        recyclerMessages.setLayoutManager(new LinearLayoutManager(this));
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        layoutManager.setStackFromEnd(true);
+
+        recyclerMessages.setLayoutManager(layoutManager);
         recyclerMessages.setAdapter(adapter);
+
+        adapter.registerAdapterDataObserver(
+                new RecyclerView.AdapterDataObserver() {
+
+                    @Override
+                    public void onItemRangeInserted(int positionStart, int itemCount) {
+
+                        recyclerMessages.smoothScrollToPosition(
+                                adapter.getItemCount() - 1
+                        );
+                    }
+
+                });
 
         ItemTouchHelper itemTouchHelper =
                 new ItemTouchHelper(
@@ -388,24 +423,76 @@ public class ChatActivity extends AppCompatActivity {
         btnMic = findViewById(R.id.btnMic);
 
         btnMic.setOnTouchListener((v, event) -> {
+
             switch (event.getAction()) {
-                case android.view.MotionEvent.ACTION_DOWN:
-                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                            == PackageManager.PERMISSION_GRANTED) {
+
+                case MotionEvent.ACTION_DOWN:
+
+                    startX = event.getRawX();
+                    cancelRecording = false;
+
+                    if (ContextCompat.checkSelfPermission(
+                            this,
+                            Manifest.permission.RECORD_AUDIO
+                    ) == PackageManager.PERMISSION_GRANTED) {
+
                         startVoiceRecording();
+
                     } else {
-                        audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO);
+
+                        audioPermissionLauncher.launch(
+                                Manifest.permission.RECORD_AUDIO
+                        );
                     }
+
                     return true;
 
-                case android.view.MotionEvent.ACTION_UP:
-                case android.view.MotionEvent.ACTION_CANCEL:
-                    stopVoiceRecording();
+                case MotionEvent.ACTION_MOVE:
+
+                    float diff = startX - event.getRawX();
+                    tvSlideCancel.setTranslationX(-diff / 3f);
+
+                    if (diff > 250 && !cancelRecording) {
+
+                        cancelRecording = true;
+
+                        if (voiceFile != null && voiceFile.exists()) {
+                            voiceFile.delete();
+                        }
+
+                        releaseVoiceRecorder();
+
+                        isRecordingVoice = false;
+
+                        recordingHandler.removeCallbacks(recordingRunnable);
+
+                        layoutRecording.setVisibility(View.GONE);
+                        layoutInput.setVisibility(View.VISIBLE);
+
+                        Toast.makeText(
+                                this,
+                                "Recording cancelled",
+                                Toast.LENGTH_SHORT
+                        ).show();
+                    }
+
+                    return true;
+
+                case MotionEvent.ACTION_UP:
+
+                case MotionEvent.ACTION_CANCEL:
+
+                    if (!cancelRecording) {
+
+                        stopVoiceRecording();
+
+                    }
+
                     return true;
             }
+
             return false;
         });
-
         btnSend.setOnClickListener(v -> sendMessage());
     }
 
@@ -629,6 +716,9 @@ public class ChatActivity extends AppCompatActivity {
 
                     adapter.rebuildMessageMap();
                     adapter.notifyDataSetChanged();
+                    if (adapter.getItemCount() > 0) {
+                        recyclerMessages.scrollToPosition(adapter.getItemCount() - 1);
+                    }
 
                     if (!messageList.isEmpty()) {
                         recyclerMessages.scrollToPosition(messageList.size() - 1);
@@ -1013,6 +1103,21 @@ public class ChatActivity extends AppCompatActivity {
 
             isRecordingVoice = true;
             voiceStartTime = System.currentTimeMillis();
+            recordingRunnable = new Runnable() {
+                @Override
+                public void run() {
+
+                    long elapsed = System.currentTimeMillis() - voiceStartTime;
+
+                    tvRecordingTime.setText(formatVoiceDuration(elapsed));
+
+                    recordingHandler.postDelayed(this, 200);
+                }
+            };
+
+            recordingHandler.post(recordingRunnable);
+            layoutInput.setVisibility(View.GONE);
+            layoutRecording.setVisibility(View.VISIBLE);
 
             Toast.makeText(this, "Recording...", Toast.LENGTH_SHORT).show();
 
@@ -1024,6 +1129,7 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void stopVoiceRecording() {
+
         if (!isRecordingVoice) return;
 
         long duration = System.currentTimeMillis() - voiceStartTime;
@@ -1032,26 +1138,45 @@ public class ChatActivity extends AppCompatActivity {
         try {
             mediaRecorder.stop();
         } catch (Exception ignored) {
+
             if (voiceFile != null && voiceFile.exists()) {
                 voiceFile.delete();
             }
+
             releaseVoiceRecorder();
+
+            layoutRecording.setVisibility(View.GONE);
+            layoutInput.setVisibility(View.VISIBLE);
+
             return;
         }
 
         releaseVoiceRecorder();
 
         if (voiceFile == null || !voiceFile.exists()) {
+
+            layoutRecording.setVisibility(View.GONE);
+            layoutInput.setVisibility(View.VISIBLE);
+
             return;
         }
 
         if (duration < 800) {
+
             voiceFile.delete();
+
+            layoutRecording.setVisibility(View.GONE);
+            layoutInput.setVisibility(View.VISIBLE);
+
             Toast.makeText(this, "Voice message too short", Toast.LENGTH_SHORT).show();
+
             return;
         }
 
         uploadVoiceMessage(voiceFile, duration);
+
+        layoutRecording.setVisibility(View.GONE);
+        layoutInput.setVisibility(View.VISIBLE);
     }
 
     private void releaseVoiceRecorder() {
@@ -1085,6 +1210,22 @@ public class ChatActivity extends AppCompatActivity {
                 );
             }
         });
+    }
+
+    private String formatVoiceDuration(long durationMs) {
+
+        long seconds = durationMs / 1000;
+
+        long minutes = seconds / 60;
+
+        seconds = seconds % 60;
+
+        return String.format(
+                java.util.Locale.getDefault(),
+                "%d:%02d",
+                minutes,
+                seconds
+        );
     }
 
     private void sendVoiceMessage(

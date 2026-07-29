@@ -84,41 +84,39 @@
             android:orientation="vertical">
 
             <!-- Reply Preview -->
-
             <LinearLayout
                 android:id="@+id/layoutReply"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="#EEEEEE"
                 android:orientation="vertical"
                 android:padding="10dp"
-                android:background="#EEEEEE"
                 android:visibility="gone">
 
                 <TextView
                     android:id="@+id/tvReplySender"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textStyle="bold"
+                    android:text="You"
                     android:textColor="@android:color/holo_blue_dark"
-                    android:text="You"/>
+                    android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/tvReplyMessage"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="#444444"
-                    android:maxLines="2"/>
+                    android:maxLines="2"
+                    android:textColor="#444444" />
 
             </LinearLayout>
 
-
-            <!-- Input Row -->
-
+            <!-- NORMAL INPUT -->
             <LinearLayout
+                android:id="@+id/layoutInput"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:orientation="horizontal"
                 android:gravity="center_vertical"
+                android:orientation="horizontal"
                 android:paddingStart="10dp"
                 android:paddingEnd="6dp">
 
@@ -129,25 +127,25 @@
                     android:layout_weight="1"
                     android:background="@android:color/transparent"
                     android:hint="Type a message..."
-                    android:maxLines="5"
-                    android:minHeight="48dp"
                     android:imeOptions="actionSend"
-                    android:inputType="textCapSentences|textMultiLine"/>
+                    android:inputType="textCapSentences|textMultiLine"
+                    android:maxLines="5"
+                    android:minHeight="48dp" />
 
                 <ImageButton
                     android:id="@+id/btnImage"
                     android:layout_width="42dp"
                     android:layout_height="42dp"
                     android:background="@android:color/transparent"
-                    android:src="@drawable/ic_image"
-                    android:contentDescription="Image"/>
+                    android:contentDescription="Image"
+                    android:src="@drawable/ic_image" />
 
                 <ImageButton
                     android:id="@+id/btnMic"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Record voice"
+                    android:contentDescription="Record Voice"
                     android:src="@android:drawable/ic_btn_speak_now" />
 
                 <ImageButton
@@ -156,9 +154,45 @@
                     android:layout_height="42dp"
                     android:layout_marginStart="4dp"
                     android:backgroundTint="@color/purple_500"
-                    android:src="@drawable/ic_send"
-                    android:contentDescription="Send"/>
+                    android:contentDescription="Send"
+                    android:src="@drawable/ic_send" />
 
+            </LinearLayout>
+
+            <!-- RECORDING LAYOUT -->
+            <LinearLayout
+                android:id="@+id/layoutRecording"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:visibility="gone">
+
+                <ImageView
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:src="@android:drawable/ic_btn_speak_now" />
+
+                <TextView
+                    android:id="@+id/tvRecordingTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:text="00:00"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvSlideCancel"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="end"
+                    android:text="◀ Slide to cancel"
+                    android:textColor="#777777"
+                    android:textSize="15sp" />
 
             </LinearLayout>
 
