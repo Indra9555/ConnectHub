@@ -74,6 +74,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private float startX;
     private boolean cancelRecording = false;
+    private static final float CANCEL_DISTANCE = 250f;
 
     private final Runnable stopTypingRunnable = () -> {
 
@@ -443,6 +444,7 @@ public class ChatActivity extends AppCompatActivity {
                         audioPermissionLauncher.launch(
                                 Manifest.permission.RECORD_AUDIO
                         );
+
                     }
 
                     return true;
@@ -450,39 +452,42 @@ public class ChatActivity extends AppCompatActivity {
                 case MotionEvent.ACTION_MOVE:
 
                     float diff = startX - event.getRawX();
-                    tvSlideCancel.setTranslationX(-diff / 3f);
 
-                    if (diff > 250 && !cancelRecording) {
+                    if (diff > 0) {
 
-                        cancelRecording = true;
+                        tvSlideCancel.setTranslationX(-diff / 3f);
 
-                        if (voiceFile != null && voiceFile.exists()) {
-                            voiceFile.delete();
+                        if (diff > CANCEL_DISTANCE) {
+
+                            cancelRecording = true;
+
+                            tvSlideCancel.setText("Release to cancel");
+
+                        } else {
+
+                            cancelRecording = false;
+
+                            tvSlideCancel.setText("◀ Slide to cancel");
+
                         }
 
-                        releaseVoiceRecorder();
-
-                        isRecordingVoice = false;
-
-                        recordingHandler.removeCallbacks(recordingRunnable);
-
-                        layoutRecording.setVisibility(View.GONE);
-                        layoutInput.setVisibility(View.VISIBLE);
-
-                        Toast.makeText(
-                                this,
-                                "Recording cancelled",
-                                Toast.LENGTH_SHORT
-                        ).show();
                     }
 
                     return true;
 
                 case MotionEvent.ACTION_UP:
-
                 case MotionEvent.ACTION_CANCEL:
 
-                    if (!cancelRecording) {
+                    tvSlideCancel.animate()
+                            .translationX(0)
+                            .setDuration(200)
+                            .start();
+
+                    if (cancelRecording) {
+
+                        cancelVoiceRecording();
+
+                    } else {
 
                         stopVoiceRecording();
 
@@ -1144,6 +1149,10 @@ public class ChatActivity extends AppCompatActivity {
             }
 
             releaseVoiceRecorder();
+            recordingHandler.removeCallbacks(recordingRunnable);
+
+            tvSlideCancel.setText("◀ Slide to cancel");
+            tvRecordingTime.setText("00:00");
 
             layoutRecording.setVisibility(View.GONE);
             layoutInput.setVisibility(View.VISIBLE);
@@ -1154,6 +1163,10 @@ public class ChatActivity extends AppCompatActivity {
         releaseVoiceRecorder();
 
         if (voiceFile == null || !voiceFile.exists()) {
+            recordingHandler.removeCallbacks(recordingRunnable);
+
+            tvSlideCancel.setText("◀ Slide to cancel");
+            tvRecordingTime.setText("00:00");
 
             layoutRecording.setVisibility(View.GONE);
             layoutInput.setVisibility(View.VISIBLE);
@@ -1165,6 +1178,11 @@ public class ChatActivity extends AppCompatActivity {
 
             voiceFile.delete();
 
+            recordingHandler.removeCallbacks(recordingRunnable);
+
+            tvSlideCancel.setText("◀ Slide to cancel");
+            tvRecordingTime.setText("00:00");
+
             layoutRecording.setVisibility(View.GONE);
             layoutInput.setVisibility(View.VISIBLE);
 
@@ -1172,11 +1190,50 @@ public class ChatActivity extends AppCompatActivity {
 
             return;
         }
-
         uploadVoiceMessage(voiceFile, duration);
+
+        recordingHandler.removeCallbacks(recordingRunnable);
+
+        tvSlideCancel.setText("◀ Slide to cancel");
+        tvRecordingTime.setText("00:00");
 
         layoutRecording.setVisibility(View.GONE);
         layoutInput.setVisibility(View.VISIBLE);
+    }
+
+    private void cancelVoiceRecording() {
+
+        isRecordingVoice = false;
+
+        try {
+
+            if (mediaRecorder != null) {
+
+                mediaRecorder.stop();
+
+            }
+
+        } catch (Exception ignored) {
+        }
+
+        releaseVoiceRecorder();
+
+        if (voiceFile != null && voiceFile.exists()) {
+
+            voiceFile.delete();
+
+        }
+
+        recordingHandler.removeCallbacks(recordingRunnable);
+
+        tvSlideCancel.setText("◀ Slide to cancel");
+
+        tvRecordingTime.setText("00:00");
+
+        layoutRecording.setVisibility(View.GONE);
+        layoutInput.setVisibility(View.VISIBLE);
+
+        Toast.makeText(this, "Recording cancelled", Toast.LENGTH_SHORT).show();
     }
 
     private void releaseVoiceRecorder() {
