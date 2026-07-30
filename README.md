@@ -1,24 +1,24 @@
 # 📱 ConnectHub
 
 <p align="center">
-  <b>A modern Android social media application built with Java, Firebase & Cloudinary.</b>
+  <b>A modern Android social media & real-time messaging application built with Java, Firebase & Cloudinary.</b>
 </p>
 
 <p align="center">
-  Connect • Share • Chat • Discover
+Connect • Share • Chat • Discover
 </p>
 
 ---
 
-## ✨ Overview
+# ✨ Overview
 
-ConnectHub is a feature-rich Android social networking application that allows users to connect with others, create posts, chat in real time, and interact through likes, comments, and notifications.
+ConnectHub is a full-featured Android social networking application that enables users to connect, share posts, chat in real time, and interact with a modern messaging experience.
 
-The project is built using modern Android development practices with Firebase as the backend and Cloudinary for image storage.
+The application is built completely in **Java** using **Firebase** for backend services and **Cloudinary** for media storage, following clean architecture and modern Android development practices.
 
 ---
 
-## 📸 Screenshots
+# 📸 Screenshots
 
 | Login | Home Feed | Profile |
 |-------|-----------|----------|
@@ -28,26 +28,28 @@ The project is built using modern Android development practices with Firebase as
 |------|---------------|-----------|
 | ![](screenshots/chat.jpeg) | ![](screenshots/notifications.jpeg) | ![](screenshots/comments.jpeg) |
 
+---
+
 # 🚀 Features
 
 ## 👤 Authentication
 
-- User Registration
-- User Login
+- Firebase Authentication
+- Secure Login & Registration
 - Auto Login
 - Secure Logout
-- Firebase Authentication
 
 ---
 
 ## 🏠 Home Feed
 
 - Create Posts
-- View Posts
+- Image Posts
 - Like Posts
-- Comment on Posts
-- Share Posts
+- Comment System
 - Real-time Feed Updates
+- User Search
+- Share-ready Architecture
 
 ---
 
@@ -55,21 +57,47 @@ The project is built using modern Android development practices with Firebase as
 
 - Edit Profile
 - Upload Profile Picture
-- Bio
-- Profile Information
+- Bio & Personal Information
 - View User Posts
+- Cloudinary Image Upload
 
 ---
 
 ## 💬 Real-Time Chat
 
+### Messaging
+
 - One-to-One Chat
 - Real-time Messaging
+- Text Messages
 - Image Messages
+- Voice Messages
+- Read Receipts (✓ ✓)
 - Online / Offline Status
 - Last Seen
 - Typing Indicator
-- Read Receipts (✓ ✓ Seen)
+
+### Voice Messages
+
+- Hold to Record
+- Slide to Cancel
+- Recording Timer
+- Waveform Visualization
+- Seekable Voice Playback
+- Pause / Resume
+- Playback Speed Control (1× / 1.5× / 2×)
+
+### Chat Experience
+
+- Swipe to Reply
+- Reply Preview
+- Double Tap ❤️ Reaction
+- Emoji Reactions
+- Long Press Context Menu
+- Copy Message
+- Delete for Everyone
+- Full Screen Image Viewer
+- Smooth Animations
 
 ---
 
@@ -77,22 +105,26 @@ The project is built using modern Android development practices with Firebase as
 
 - Follow Users
 - Like System
-- Comments
+- Comment System
 - Notifications
+- Search Users
 
 ---
 
 # 🛠 Tech Stack
 
-| Technology | Usage |
-|------------|-------|
+| Technology | Purpose |
+|------------|---------|
 | Java | Android Development |
 | Firebase Authentication | User Authentication |
-| Cloud Firestore | Database |
+| Cloud Firestore | Realtime Database |
 | Cloudinary | Image Storage |
 | Glide | Image Loading |
-| Material Design 3 | UI Design |
-| RecyclerView | Dynamic Lists |
+| RecyclerView | Dynamic UI |
+| Material Design 3 | UI Components |
+| MediaRecorder | Voice Recording |
+| MediaPlayer | Voice Playback |
+| WaveformSeekBar | Voice Waveform |
 
 ---
 
@@ -109,7 +141,8 @@ app
 ├── network
 ├── repository
 ├── services
-└── utils
+├── utils
+└── listeners
 ```
 
 ---
@@ -117,21 +150,22 @@ app
 # 🏗 Architecture
 
 ```
-UI (Activities)
-        │
-        ▼
+Activities
+      │
+      ▼
 Repository Layer
-        │
-        ▼
+      │
+      ▼
 Firebase Firestore
-        │
-        ▼
-Cloudinary (Images)
+      │
+      ├──────────────► Firebase Authentication
+      │
+      └──────────────► Cloudinary
 ```
 
 ---
 
-# 🔥 Current Features
+# ✅ Implemented Features
 
 - ✅ Firebase Authentication
 - ✅ User Profiles
@@ -141,29 +175,42 @@ Cloudinary (Images)
 - ✅ Comment System
 - ✅ Search Users
 - ✅ Chat List
-- ✅ Real-time Chat
+- ✅ One-to-One Chat
+- ✅ Real-time Messaging
 - ✅ Image Messages
+- ✅ Voice Messages
+- ✅ Waveform Playback
+- ✅ Voice Recording
+- ✅ Reply Messages
+- ✅ Swipe to Reply
+- ✅ Emoji Reactions
 - ✅ Online Status
-- ✅ Typing Indicator
 - ✅ Last Seen
+- ✅ Typing Indicator
 - ✅ Read Receipts
+- ✅ Delete for Everyone
+- ✅ Full Screen Image Viewer
+- ✅ Smooth Chat Animations
 
 ---
 
 # 🚧 Upcoming Features
 
-- Delete Messages
+- Delete for Me
 - Edit Messages
-- Full Screen Image Viewer
-- Push Notifications
-- Voice Messages
 - Group Chat
+- Push Notifications (FCM)
 - Stories
-- Video Sharing
+- Video Messages
+- Voice Calls
+- Video Calls
 - Dark Mode
-- Message Reactions
-- Post Saving
+- Message Search
+- Starred Messages
+- Pinned Messages
+- Chat Wallpaper
 - User Blocking
+- End-to-End Encryption
 
 ---
 
@@ -177,11 +224,13 @@ git clone https://github.com/Indra9555/ConnectHub.git
 
 Open the project in Android Studio.
 
-Add your own Firebase configuration file:
+Add your Firebase configuration file:
 
 ```
 app/google-services.json
 ```
+
+Configure your Cloudinary credentials.
 
 Sync Gradle.
 
@@ -189,18 +238,20 @@ Run the application.
 
 ---
 
-# 📖 Learning Objectives
+# 📖 Learning Outcomes
 
-This project was created to improve skills in:
+This project helped strengthen my understanding of:
 
-- Android Development
-- Java
-- Firebase
+- Android Development (Java)
+- Firebase Authentication
 - Cloud Firestore
-- REST APIs
-- Image Uploading
-- Real-time Applications
+- Cloudinary Integration
+- Realtime Database
+- Media Recording & Playback
+- RecyclerView
 - Material Design
+- Repository Pattern
+- Clean Code Practices
 - Git & GitHub
 
 ---
@@ -215,7 +266,7 @@ Feel free to fork the repository and submit a Pull Request.
 
 # 📄 License
 
-This project is developed for educational and portfolio purposes.
+This project is developed for learning, portfolio, and educational purposes.
 
 ---
 
@@ -225,7 +276,7 @@ This project is developed for educational and portfolio purposes.
 
 B.Tech Computer Science Student
 
-Android Developer | Java | Firebase | Cloud Computing
+Android Developer • Java • Firebase • Cloud Computing
 
 GitHub:
 https://github.com/Indra9555
