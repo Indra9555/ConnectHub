@@ -48,6 +48,13 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
     public MessageAdapter(List<Message> messageList) {
         this.messageList = messageList;
+        setHasStableIds(true);
+    }
+    @Override
+    public long getItemId(int position) {
+        return messageList.get(position)
+                .getMessageId()
+                .hashCode();
     }
     public interface OnMessageLongClickListener {
         void onMessageLongClick(View anchor, Message message);
@@ -170,16 +177,13 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             bindSeen(sentHolder.tvSeen, message);
             bindReaction(sentHolder.tvReaction, message);
 
-            View target = "image".equals(message.getType())
-                    ? sentHolder.imgMessage
-                    : sentHolder.tvMessage;
-
-            target.setOnLongClickListener(v -> {
-                if (listener != null) listener.onMessageLongClick(v, message);
+            sentHolder.layoutBubble.setOnLongClickListener(v -> {
+                if (listener != null)
+                    listener.onMessageLongClick(v, message);
                 return true;
             });
 
-            attachDoubleTap(target, message);
+            attachDoubleTap(sentHolder.layoutBubble, message);
 
         } else {
 
@@ -229,16 +233,13 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
             bindReaction(receivedHolder.tvReaction, message);
 
-            View target = "image".equals(message.getType())
-                    ? receivedHolder.imgMessage
-                    : receivedHolder.tvMessage;
-
-            target.setOnLongClickListener(v -> {
-                if (listener != null) listener.onMessageLongClick(v, message);
+            receivedHolder.layoutBubble.setOnLongClickListener(v -> {
+                if (listener != null)
+                    listener.onMessageLongClick(v, message);
                 return true;
             });
 
-            attachDoubleTap(target, message);
+            attachDoubleTap( receivedHolder.layoutBubble, message);
         }
 
         if (position > lastAnimatedPosition) {
@@ -440,6 +441,10 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
 
     private void bindReaction(TextView tvReaction, Message message) {
+        if (message.isDeleted()) {
+            tvReaction.setVisibility(View.GONE);
+            return;
+        }
 
         if (message.getReactions() == null || message.getReactions().isEmpty()) {
             tvReaction.setVisibility(View.GONE);
@@ -513,6 +518,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         TextView tvVoiceDuration;
         WaveformSeekBar waveformSeekBar;
         TextView tvSpeed;
+        LinearLayout layoutBubble;
 
         public SentViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -532,6 +538,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             waveformSeekBar =
                     itemView.findViewById(R.id.waveformSeekBar);
             tvSpeed = itemView.findViewById(R.id.tvSpeed);
+            layoutBubble = itemView.findViewById(R.id.layoutBubble);
         }
     }
 
@@ -553,6 +560,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         TextView tvVoiceDuration;
         WaveformSeekBar waveformSeekBar;
         TextView tvSpeed;
+        LinearLayout layoutBubble;
         public ReceivedViewHolder(@NonNull View itemView) {
             super(itemView);
             tvMessage = itemView.findViewById(R.id.tvMessage);
@@ -570,6 +578,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             waveformSeekBar =
                     itemView.findViewById(R.id.waveformSeekBar);
             tvSpeed = itemView.findViewById(R.id.tvSpeed);
+            layoutBubble = itemView.findViewById(R.id.layoutBubble);
 
         }
     }

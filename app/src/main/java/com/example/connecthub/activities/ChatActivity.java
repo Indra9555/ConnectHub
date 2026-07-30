@@ -19,6 +19,8 @@ import android.widget.TextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -31,6 +33,8 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.content.ContextCompat;
 import java.io.File;
+
+import com.example.connecthub.adapters.MessageDiffCallback;
 import com.example.connecthub.chat.VoiceUploadManager;
 
 import androidx.activity.EdgeToEdge;
@@ -98,6 +102,7 @@ public class ChatActivity extends AppCompatActivity {
     private RecyclerView recyclerMessages;
     private EditText etMessage;
     private ImageButton btnSend;
+    private boolean firstLoad = true;
 
     private List<Message> messageList;
     private MessageAdapter adapter;private LinearLayout layoutInput;
@@ -690,7 +695,7 @@ public class ChatActivity extends AppCompatActivity {
 
                     if (value == null) return;
 
-                    messageList.clear();
+                    List<Message> newList = new ArrayList<>();
 
                     for (DocumentSnapshot document : value.getDocuments()) {
 
@@ -715,19 +720,21 @@ public class ChatActivity extends AppCompatActivity {
                                         && message.getReceiverId().equals(senderId);
 
                         if (chat1 || chat2) {
-                            messageList.add(message);
+                            newList.add(message);
                         }
                     }
 
-                    adapter.rebuildMessageMap();
-                    adapter.notifyDataSetChanged();
-                    if (adapter.getItemCount() > 0) {
-                        recyclerMessages.scrollToPosition(adapter.getItemCount() - 1);
-                    }
+                    DiffUtil.DiffResult diffResult =
+                            DiffUtil.calculateDiff(
+                                    new MessageDiffCallback(messageList, newList)
+                            );
 
-                    if (!messageList.isEmpty()) {
-                        recyclerMessages.scrollToPosition(messageList.size() - 1);
-                    }
+                    messageList.clear();
+                    messageList.addAll(newList);
+
+                    adapter.rebuildMessageMap();
+
+                    diffResult.dispatchUpdatesTo(adapter);
 
                 });
     }

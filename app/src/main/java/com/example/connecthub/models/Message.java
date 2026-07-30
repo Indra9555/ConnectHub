@@ -191,5 +191,20 @@ public class Message {
     public void setWaveform(java.util.List<Integer> waveform) {
         this.waveform = waveform;
     }
+
+    public String getReactionSummary() {
+
+        if (reactions == null || reactions.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder builder = new StringBuilder();
+
+        for (String reaction : reactions.values()) {
+            builder.append(reaction);
+        }
+
+        return builder.toString();
+    }
 }
 
