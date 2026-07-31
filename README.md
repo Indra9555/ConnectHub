@@ -22,7 +22,7 @@ The application is built completely in **Java** using **Firebase** for backend s
 
 | Login | Home Feed | Profile |
 |-------|-----------|----------|
-| ![](screenshots/login.jpeg) | ![](screenshots/home.jpeg) | ![](screenshots/profile.jpeg) |
+| ![](assets/screenshots/login.jpeg) | ![](screenshots/home.jpeg) | ![](screenshots/profile.jpeg) |
 
 | Chat | Notifications | Comments |
 |------|---------------|-----------|
