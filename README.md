@@ -83,11 +83,11 @@ The project follows modern Android development practices while using Firebase fo
 
 | Login | Home Feed | Profile |
 |:------:|:---------:|:--------:|
-| ![](assets/screenshots/login.jpg) | ![](assets/screenshots/home.jpg) | ![](assets/screenshots/profile.jpg) |
+| ![](assets/screenshots/login.jpeg) | ![](assets/screenshots/home.jpeg) | ![](assets/screenshots/profile.jpeg) |
 
 | Chat | Notifications | Comments |
 |:------:|:-------------:|:----------:|
-| ![](assets/screenshots/chat.jpg) | ![](assets/screenshots/notifications.jpg) | ![](assets/screenshots/comments.jpg) |
+| ![](assets/screenshots/chat.jpeg) | ![](assets/screenshots/notifications.jpeg) | ![](assets/screenshots/comments.jpeg) |
 
 ---
 
