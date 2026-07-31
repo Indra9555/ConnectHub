@@ -57,6 +57,7 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging:24.1.0")
     implementation("androidx.activity:activity:1.9.0")
     implementation("com.github.massoudss:waveformSeekBar:5.0.2")
+    implementation("com.google.firebase:firebase-messaging:24.1.0")
 
 
     testImplementation(libs.junit)
