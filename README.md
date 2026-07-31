@@ -1,32 +1,93 @@
 # 📱 ConnectHub
 
 <p align="center">
-  <b>A modern Android social media & real-time messaging application built with Java, Firebase & Cloudinary.</b>
+
+# A Modern Social Media & Real-Time Chat Application for Android
+
+Built with **Java**, **Firebase**, **Cloudinary**, and **Material Design 3**
+
+<br>
+
+![GitHub stars](https://img.shields.io/github/stars/Indra9555/ConnectHub?style=for-the-badge)
+![GitHub forks](https://img.shields.io/github/forks/Indra9555/ConnectHub?style=for-the-badge)
+![GitHub last commit](https://img.shields.io/github/last-commit/Indra9555/ConnectHub?style=for-the-badge)
+![GitHub repo size](https://img.shields.io/github/repo-size/Indra9555/ConnectHub?style=for-the-badge)
+
+<br>
+
+![Java](https://img.shields.io/badge/Java-17-orange?style=for-the-badge)
+![Android](https://img.shields.io/badge/Android-Studio-green?style=for-the-badge)
+![Firebase](https://img.shields.io/badge/Firebase-Firestore-FFCA28?style=for-the-badge)
+![Cloudinary](https://img.shields.io/badge/Cloudinary-Media-blue?style=for-the-badge)
+
 </p>
 
-<p align="center">
-Connect • Share • Chat • Discover
-</p>
+---
+
+# ⭐ Enjoying ConnectHub?
+
+If you like this project, consider giving it a **⭐ Star** on GitHub.
+
+It helps the project reach more developers and motivates future development.
+
+---
+
+# 📑 Quick Navigation
+
+- [✨ Overview](#-overview)
+- [🎥 Demo](#-demo)
+- [📸 Screenshots](#-screenshots)
+- [🚀 Features](#-features)
+- [🛠 Tech Stack](#-tech-stack)
+- [📂 Project Structure](#-project-structure)
+- [🏗 Architecture](#-architecture)
+- [✅ Implemented Features](#-implemented-features)
+- [🚧 Upcoming Features](#-upcoming-features)
+- [⚙️ Installation](#️-installation)
+- [📖 Learning Outcomes](#-learning-outcomes)
+- [🤝 Contributing](#-contributing)
+- [👨‍💻 Developer](#-developer)
 
 ---
 
 # ✨ Overview
 
-ConnectHub is a full-featured Android social networking application that enables users to connect, share posts, chat in real time, and interact with a modern messaging experience.
+ConnectHub is a modern Android social networking application designed to provide a complete social media experience with **real-time messaging**, **post sharing**, and **interactive communication**.
 
-The application is built completely in **Java** using **Firebase** for backend services and **Cloudinary** for media storage, following clean architecture and modern Android development practices.
+The project follows modern Android development practices while using Firebase for backend services and Cloudinary for media storage.
+
+## Highlights
+
+- 📱 Native Android Application
+- 💬 Real-Time Chat
+- 🎤 Voice Messaging
+- 📷 Image Sharing
+- ❤️ Emoji Reactions
+- 👤 User Profiles
+- ☁ Firebase Backend
+- ⚡ Clean Architecture
+
+---
+
+# 🎥 Demo
+
+<p align="center">
+
+![](assets/demo/connecthub-demo.gif)
+
+</p>
 
 ---
 
 # 📸 Screenshots
 
 | Login | Home Feed | Profile |
-|-------|-----------|----------|
-| ![](assets/screenshots/login.jpeg) | ![](assets/screenshots/home.jpeg) | ![](assets/screenshots/profile.jpeg) |
+|:------:|:---------:|:--------:|
+| ![](assets/screenshots/login.jpg) | ![](assets/screenshots/home.jpg) | ![](assets/screenshots/profile.jpg) |
 
 | Chat | Notifications | Comments |
-|------|---------------|-----------|
-| ![](assets/screenshots/chat.jpeg) | ![](assets/screenshots/notifications.jpeg) | ![](assets/screenshots/comments.jpeg) |
+|:------:|:-------------:|:----------:|
+| ![](assets/screenshots/chat.jpg) | ![](assets/screenshots/notifications.jpg) | ![](assets/screenshots/comments.jpg) |
 
 ---
 
@@ -35,7 +96,8 @@ The application is built completely in **Java** using **Firebase** for backend s
 ## 👤 Authentication
 
 - Firebase Authentication
-- Secure Login & Registration
+- Secure Registration
+- Login
 - Auto Login
 - Secure Logout
 
@@ -47,9 +109,8 @@ The application is built completely in **Java** using **Firebase** for backend s
 - Image Posts
 - Like Posts
 - Comment System
-- Real-time Feed Updates
-- User Search
-- Share-ready Architecture
+- Real-Time Feed Updates
+- Search Users
 
 ---
 
@@ -57,9 +118,9 @@ The application is built completely in **Java** using **Firebase** for backend s
 
 - Edit Profile
 - Upload Profile Picture
-- Bio & Personal Information
-- View User Posts
-- Cloudinary Image Upload
+- Bio
+- User Information
+- User Posts
 
 ---
 
@@ -68,14 +129,14 @@ The application is built completely in **Java** using **Firebase** for backend s
 ### Messaging
 
 - One-to-One Chat
-- Real-time Messaging
+- Real-Time Messaging
 - Text Messages
 - Image Messages
 - Voice Messages
-- Read Receipts (✓ ✓)
+- Read Receipts
+- Typing Indicator
 - Online / Offline Status
 - Last Seen
-- Typing Indicator
 
 ### Voice Messages
 
@@ -83,16 +144,16 @@ The application is built completely in **Java** using **Firebase** for backend s
 - Slide to Cancel
 - Recording Timer
 - Waveform Visualization
-- Seekable Voice Playback
+- Seekable Playback
 - Pause / Resume
-- Playback Speed Control (1× / 1.5× / 2×)
+- Playback Speed (1× • 1.5× • 2×)
 
-### Chat Experience
+### Interactive Chat
 
 - Swipe to Reply
 - Reply Preview
-- Double Tap ❤️ Reaction
 - Emoji Reactions
+- Double Tap ❤️ Reaction
 - Long Press Context Menu
 - Copy Message
 - Delete for Everyone
@@ -103,24 +164,24 @@ The application is built completely in **Java** using **Firebase** for backend s
 
 ## ❤️ Social Features
 
-- Follow Users
 - Like System
 - Comment System
+- Follow Users
 - Notifications
-- Search Users
+- User Search
 
 ---
 
 # 🛠 Tech Stack
 
 | Technology | Purpose |
-|------------|---------|
+|------------|----------|
 | Java | Android Development |
 | Firebase Authentication | User Authentication |
-| Cloud Firestore | Realtime Database |
-| Cloudinary | Image Storage |
+| Cloud Firestore | Real-Time Database |
+| Cloudinary | Media Storage |
 | Glide | Image Loading |
-| RecyclerView | Dynamic UI |
+| RecyclerView | Dynamic Lists |
 | Material Design 3 | UI Components |
 | MediaRecorder | Voice Recording |
 | MediaPlayer | Voice Playback |
@@ -137,12 +198,12 @@ app
 ├── adapters
 ├── firebase
 ├── helpers
+├── listeners
 ├── models
 ├── network
 ├── repository
 ├── services
-├── utils
-└── listeners
+└── utils
 ```
 
 ---
@@ -150,17 +211,17 @@ app
 # 🏗 Architecture
 
 ```
-Activities
-      │
-      ▼
-Repository Layer
-      │
-      ▼
-Firebase Firestore
-      │
-      ├──────────────► Firebase Authentication
-      │
-      └──────────────► Cloudinary
+               Android Activities
+                       │
+                       ▼
+              Repository Layer
+                       │
+        ┌──────────────┼──────────────┐
+        ▼              ▼              ▼
+ Authentication   Cloud Firestore   Cloudinary
+        │              │              │
+        └──────────────┴──────────────┘
+                 Real-Time Backend
 ```
 
 ---
@@ -176,20 +237,22 @@ Firebase Firestore
 - ✅ Search Users
 - ✅ Chat List
 - ✅ One-to-One Chat
-- ✅ Real-time Messaging
+- ✅ Real-Time Messaging
 - ✅ Image Messages
 - ✅ Voice Messages
-- ✅ Waveform Playback
 - ✅ Voice Recording
-- ✅ Reply Messages
+- ✅ Waveform Playback
+- ✅ Playback Speed Control
 - ✅ Swipe to Reply
+- ✅ Reply Preview
 - ✅ Emoji Reactions
-- ✅ Online Status
-- ✅ Last Seen
-- ✅ Typing Indicator
-- ✅ Read Receipts
+- ✅ Double Tap Reactions
 - ✅ Delete for Everyone
 - ✅ Full Screen Image Viewer
+- ✅ Online Status
+- ✅ Typing Indicator
+- ✅ Last Seen
+- ✅ Read Receipts
 - ✅ Smooth Chat Animations
 
 ---
@@ -207,7 +270,6 @@ Firebase Firestore
 - Dark Mode
 - Message Search
 - Starred Messages
-- Pinned Messages
 - Chat Wallpaper
 - User Blocking
 - End-to-End Encryption
@@ -224,13 +286,13 @@ git clone https://github.com/Indra9555/ConnectHub.git
 
 Open the project in Android Studio.
 
-Add your Firebase configuration file:
+Add your Firebase configuration:
 
 ```
 app/google-services.json
 ```
 
-Configure your Cloudinary credentials.
+Configure Cloudinary credentials.
 
 Sync Gradle.
 
@@ -246,21 +308,21 @@ This project helped strengthen my understanding of:
 - Firebase Authentication
 - Cloud Firestore
 - Cloudinary Integration
-- Realtime Database
+- Real-Time Applications
 - Media Recording & Playback
 - RecyclerView
-- Material Design
+- Material Design 3
 - Repository Pattern
-- Clean Code Practices
+- Clean Architecture
 - Git & GitHub
 
 ---
 
 # 🤝 Contributing
 
-Contributions, suggestions and feedback are always welcome.
+Contributions, ideas, and feedback are always welcome.
 
-Feel free to fork the repository and submit a Pull Request.
+Feel free to fork this repository and submit a Pull Request.
 
 ---
 
@@ -272,17 +334,18 @@ This project is developed for learning, portfolio, and educational purposes.
 
 # 👨‍💻 Developer
 
-**Indrajeet Verma**
+## Indrajeet Verma
 
-B.Tech Computer Science Student
+**B.Tech Computer Science Student**
 
 Android Developer • Java • Firebase • Cloud Computing
 
-GitHub:
-https://github.com/Indra9555
+GitHub: **https://github.com/Indra9555**
 
 ---
 
 <p align="center">
-⭐ If you like this project, consider giving it a star!
+
+⭐ **If you found this project useful, don't forget to star the repository!** ⭐
+
 </p>
