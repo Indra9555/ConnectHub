@@ -8,15 +8,23 @@
         android:title="Search"
         android:icon="@android:drawable/ic_menu_search"
         app:showAsAction="ifRoom"/>
+
     <item
         android:id="@+id/action_notifications"
-        android:icon="@drawable/ic_notifications"
         android:title="Notifications"
+        android:icon="@drawable/ic_notifications"
         app:showAsAction="ifRoom"/>
+
     <item
         android:id="@+id/action_chat"
         android:title="Chats"
         android:icon="@drawable/ic_chat"
+        app:showAsAction="ifRoom"/>
+
+    <item
+        android:id="@+id/action_groups"
+        android:title="Groups"
+        android:icon="@drawable/ic_group"
         app:showAsAction="ifRoom"/>
 
     <item

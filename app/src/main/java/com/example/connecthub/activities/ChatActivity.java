@@ -131,6 +131,10 @@ public class ChatActivity extends AppCompatActivity {
     private File voiceFile;
     private boolean isRecordingVoice = false;
     private long voiceStartTime = 0L;
+    private boolean isGroup = false;
+
+    private String groupId;
+    private String groupName;
     private final ActivityResultLauncher<String> audioPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
                 if (granted) {
@@ -169,6 +173,18 @@ public class ChatActivity extends AppCompatActivity {
 
 
         setContentView(R.layout.activity_chat);
+        isGroup = getIntent().getBooleanExtra("isGroup", false);
+
+        if (isGroup) {
+
+            groupId = getIntent().getStringExtra("groupId");
+            groupName = getIntent().getStringExtra("groupName");
+
+        } else {
+
+            receiverId = getIntent().getStringExtra("receiverId");
+
+        }
         layoutInput = findViewById(R.id.layoutInput);
         layoutRecording = findViewById(R.id.layoutRecording);
 
@@ -220,7 +236,7 @@ public class ChatActivity extends AppCompatActivity {
 
                     firestore.collection("Users")
                             .document(uid)
-                            .update("typingTo", receiverId);
+                            .update("typingTo", isGroup ? groupId : receiverId);
 
                     typingHandler.removeCallbacks(stopTypingRunnable);
 
@@ -247,7 +263,9 @@ public class ChatActivity extends AppCompatActivity {
         auth = FirebaseAuth.getInstance();
 
         receiverId = getIntent().getStringExtra("uid");
-        resetUnreadCounter();
+        if (!isGroup) {
+            resetUnreadCounter();
+        }
 
         setSupportActionBar(chatToolbar);
 
@@ -504,9 +522,24 @@ public class ChatActivity extends AppCompatActivity {
             return false;
         });
         btnSend.setOnClickListener(v -> sendMessage());
+
     }
 
     private void sendMessage() {
+
+        if (isGroup) {
+
+            sendGroupMessage();
+
+        } else {
+
+            sendPrivateMessage();
+
+        }
+
+    }
+
+    private void sendPrivateMessage() {
 
         String text = etMessage.getText().toString().trim();
 
@@ -684,8 +717,110 @@ public class ChatActivity extends AppCompatActivity {
                 });
 
     }
+    private void sendGroupMessage() {
+
+        String text = etMessage.getText().toString().trim();
+
+        if (text.isEmpty()) {
+            return;
+        }
+
+        String senderId = auth.getCurrentUser().getUid();
+
+        Message message = new Message(
+                senderId,
+                groupId,
+                text,
+                "",
+                "text",
+                System.currentTimeMillis()
+        );
+
+        firestore.collection("GroupMessages")
+                .add(message)
+                .addOnSuccessListener(documentReference -> {
+
+                    documentReference.update(
+                            "messageId",
+                            documentReference.getId()
+                    );
+
+                    etMessage.setText("");
+
+                    replyingMessage = null;
+                    layoutReply.setVisibility(View.GONE);
+
+                    firestore.collection("Groups")
+                            .document(groupId)
+                            .update(
+                                    "lastMessage", text,
+                                    "lastTimestamp", System.currentTimeMillis()
+                            );
+
+                })
+                .addOnFailureListener(e ->
+
+                        Toast.makeText(
+                                ChatActivity.this,
+                                e.getMessage(),
+                                Toast.LENGTH_SHORT
+                        ).show()
+
+                );
+
+    }
 
     private void loadMessages() {
+
+        if (isGroup) {
+
+            firestore.collection("GroupMessages")
+                    .document(groupId)
+                    .collection("Messages")
+                    .orderBy("timestamp", Query.Direction.ASCENDING)
+                    .addSnapshotListener((value, error) -> {
+
+                        if (value == null) return;
+
+                        List<Message> newList = new ArrayList<>();
+
+                        for (DocumentSnapshot doc : value.getDocuments()) {
+
+                            Message message = doc.toObject(Message.class);
+
+                            if (message == null) continue;
+
+                            message.setMessageId(doc.getId());
+
+                            newList.add(message);
+                        }
+
+                        DiffUtil.DiffResult diff =
+                                DiffUtil.calculateDiff(
+                                        new MessageDiffCallback(messageList, newList)
+                                );
+
+                        messageList.clear();
+                        messageList.addAll(newList);
+
+                        adapter.rebuildMessageMap();
+
+                        diff.dispatchUpdatesTo(adapter);
+
+                        recyclerMessages.scrollToPosition(messageList.size() - 1);
+
+                    });
+
+            return;
+        } else {
+
+            loadPrivateMessages();
+
+        }
+
+    }
+
+    private void loadPrivateMessages() {
 
         String senderId = auth.getCurrentUser().getUid();
 
@@ -737,6 +872,13 @@ public class ChatActivity extends AppCompatActivity {
                     diffResult.dispatchUpdatesTo(adapter);
 
                 });
+
+    }
+
+    private void loadGroupMessages() {
+
+        // We will implement this after we create the GroupMessages collection.
+
     }
     private void resetUnreadCounter() {
 
@@ -771,6 +913,17 @@ public class ChatActivity extends AppCompatActivity {
     }
     private void loadUserStatus() {
 
+        if (isGroup) {
+
+            tvChatName.setText(groupName);
+
+            tvUserStatus.setText("👥 Group");
+
+            imgUser.setImageResource(android.R.drawable.ic_menu_myplaces);
+
+            return;
+        }
+
         firestore.collection("Users")
                 .document(receiverId)
                 .addSnapshotListener((document, error) -> {
@@ -789,6 +942,7 @@ public class ChatActivity extends AppCompatActivity {
                             .into(imgUser);
 
                     tvChatName.setText(name);
+
                     String typingTo = document.getString("typingTo");
 
                     String myUid = FirebaseAuth.getInstance()

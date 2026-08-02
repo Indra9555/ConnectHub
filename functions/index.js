@@ -6,77 +6,76 @@ const admin = require("firebase-admin");
 admin.initializeApp();
 
 setGlobalOptions({
-    maxInstances: 10,
+  maxInstances: 10,
 });
 
 exports.sendMessageNotification = onDocumentCreated(
     "Messages/{messageId}",
     async (event) => {
+      if (!event.data) return;
 
-        if (!event.data) return;
+      const message = event.data.data();
 
-const message = event.data.data();
+      if (!message) return;
+      const receiverId = message.receiverId;
 
-if (!message) return;
-        const receiverId = message.receiverId;
+      const userDoc = await admin.firestore()
+          .collection("Users")
+          .doc(receiverId)
+          .get();
 
-        const userDoc = await admin.firestore()
-            .collection("Users")
-            .doc(receiverId)
-            .get();
+      if (!userDoc.exists) return;
 
-        if (!userDoc.exists) return;
+      const token = userDoc.data().fcmToken;
 
-        const token = userDoc.data().fcmToken;
+      if (!token) return;
 
-        if (!token) return;
+      const senderDoc = await admin.firestore()
+          .collection("Users")
+          .doc(message.senderId)
+          .get();
 
-        const senderDoc = await admin.firestore()
-            .collection("Users")
-            .doc(message.senderId)
-            .get();
+      const senderName =
+            senderDoc.exists ?
+                senderDoc.data().username :
+                "Someone";
 
-        const senderName =
-            senderDoc.exists
-                ? senderDoc.data().username
-                : "Someone";
+      let body = message.message || "";
 
-        let body = message.message || "";
+      switch (message.type) {
+        case "image":
+          body = "📷 Image";
+          break;
 
-        switch (message.type) {
-            case "image":
-                body = "📷 Image";
-                break;
+        case "voice":
+          body = "🎤 Voice Message";
+          break;
 
-            case "voice":
-                body = "🎤 Voice Message";
-                    break;
+        default:
+          body = message.message || "New Message";
+      }
 
-           default:
-                body = message.message || "New Message";
-                    }
+      await admin.messaging().send({
 
-        await admin.messaging().send({
+        token,
 
-            token,
+        notification: {
+          title: senderName,
+          body: body,
 
-            notification: {
-                title: senderName,
-                body: body,
-                
-            },
+        },
 
-            data: {
-                senderId: message.senderId,
-                receiverId: message.receiverId,
-            },
+        data: {
+          senderId: message.senderId,
+          receiverId: message.receiverId,
+        },
 
-            android: {
-                priority: "high",
-            }
+        android: {
+          priority: "high",
+        },
 
-        });
+      });
 
-        console.log("Notification sent");
-    }
+      console.log("Notification sent");
+    },
 );

@@ -41,6 +41,7 @@ dependencies {
     implementation(libs.constraintlayout)
     implementation(libs.material)
 
+
     // Firebase BOM
     implementation(platform("com.google.firebase:firebase-bom:34.2.0"))
 
