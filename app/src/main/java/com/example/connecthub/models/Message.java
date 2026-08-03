@@ -25,6 +25,7 @@ public class Message {
     private long voiceDuration = 0;
     private java.util.Map<String, String> reactions;
     private java.util.List<Integer> waveform;
+    private String groupId = "";
 
 
     public Message() {
@@ -205,6 +206,13 @@ public class Message {
         }
 
         return builder.toString();
+    }
+    public String getGroupId() {
+        return groupId;
+    }
+
+    public void setGroupId(String groupId) {
+        this.groupId = groupId;
     }
 }
 

@@ -1,5 +1,6 @@
 package com.example.connecthub.activities;
 
+import android.content.Intent;
 import android.net.Uri;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -211,6 +212,23 @@ public class ChatActivity extends AppCompatActivity {
 
 
         chatToolbar = findViewById(R.id.chatToolbar);
+        chatToolbar.setOnClickListener(v -> {
+
+            if (isGroup) {
+
+                Intent intent =
+                        new Intent(
+                                ChatActivity.this,
+                                GroupInfoActivity.class
+                        );
+
+                intent.putExtra("groupId", groupId);
+
+                startActivity(intent);
+
+            }
+
+        });
         tvChatName = findViewById(R.id.tvChatName);
         tvUserStatus = findViewById(R.id.tvUserStatus);
         recyclerMessages = findViewById(R.id.recyclerMessages);
@@ -729,14 +747,18 @@ public class ChatActivity extends AppCompatActivity {
 
         Message message = new Message(
                 senderId,
-                groupId,
+                "",
                 text,
                 "",
                 "text",
                 System.currentTimeMillis()
         );
 
+        message.setGroupId(groupId);
+
         firestore.collection("GroupMessages")
+                .document(groupId)
+                .collection("Messages")
                 .add(message)
                 .addOnSuccessListener(documentReference -> {
 
@@ -874,10 +896,51 @@ public class ChatActivity extends AppCompatActivity {
                 });
 
     }
-
     private void loadGroupMessages() {
 
-        // We will implement this after we create the GroupMessages collection.
+        firestore.collection("GroupMessages")
+                .document(groupId)
+                .collection("Messages")
+                .orderBy("timestamp", Query.Direction.ASCENDING)
+                .addSnapshotListener((value, error) -> {
+
+                    if (error != null) {
+                        error.printStackTrace();
+                        return;
+                    }
+
+                    if (value == null) return;
+
+                    List<Message> newList = new ArrayList<>();
+
+                    for (DocumentSnapshot doc : value.getDocuments()) {
+
+                        Message message = doc.toObject(Message.class);
+
+                        if (message == null) continue;
+
+                        message.setMessageId(doc.getId());
+
+                        newList.add(message);
+                    }
+
+                    DiffUtil.DiffResult diff =
+                            DiffUtil.calculateDiff(
+                                    new MessageDiffCallback(messageList, newList)
+                            );
+
+                    messageList.clear();
+                    messageList.addAll(newList);
+
+                    adapter.rebuildMessageMap();
+
+                    diff.dispatchUpdatesTo(adapter);
+
+                    if (!messageList.isEmpty()) {
+                        recyclerMessages.scrollToPosition(messageList.size() - 1);
+                    }
+
+                });
 
     }
     private void resetUnreadCounter() {
