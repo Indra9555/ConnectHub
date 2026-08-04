@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.connecthub.R;
 import com.example.connecthub.models.User;
+import com.google.firebase.auth.FirebaseAuth;
 
 import java.util.List;
 
@@ -19,26 +20,32 @@ public class GroupMemberAdapter
         extends RecyclerView.Adapter<GroupMemberAdapter.MemberViewHolder> {
 
     private final List<User> members;
-    private final List<String> admins;
+    private List<String> admins;
+    private boolean isAdmin;
 
-    private final boolean isAdmin;
+
 
     private final OnRemoveClickListener listener;
-
+    private final OnPromoteClickListener promoteListener;
     public interface OnRemoveClickListener {
         void onRemove(User user);
+    }
+    public interface OnPromoteClickListener {
+        void onPromote(User user);
     }
 
     public GroupMemberAdapter(
             List<User> members,
             List<String> admins,
             boolean isAdmin,
-            OnRemoveClickListener listener) {
+            OnRemoveClickListener listener,
+            OnPromoteClickListener promoteListener) {
 
         this.members = members;
         this.admins = admins;
         this.isAdmin = isAdmin;
         this.listener = listener;
+        this.promoteListener = promoteListener;
     }
 
     @NonNull
@@ -60,15 +67,31 @@ public class GroupMemberAdapter
 
         User user = members.get(position);
 
+        // Debug Logs
+        android.util.Log.d("ADMIN_CHECK",
+                "User = " + user.getName());
+
+        android.util.Log.d("ADMIN_CHECK",
+                "UID = " + user.getUid());
+
+        android.util.Log.d("ADMIN_CHECK",
+                "Admins = " + admins);
+
+        android.util.Log.d("ADMIN_CHECK",
+                "Contains = " + admins.contains(user.getUid()));
+
+        // Name
         holder.tvName.setText(user.getName());
 
+        // Profile Image
         Glide.with(holder.itemView.getContext())
                 .load(user.getImage())
                 .placeholder(R.drawable.ic_person)
                 .error(R.drawable.ic_person)
                 .into(holder.imgProfile);
 
-        if (admins.contains(user.getUid())) {
+        // Admin Label
+        if (admins != null && admins.contains(user.getUid())) {
 
             holder.tvRole.setVisibility(View.VISIBLE);
             holder.tvRole.setText("Admin");
@@ -79,7 +102,32 @@ public class GroupMemberAdapter
 
         }
 
+        // ==========================
+        // Promote Button
+        // ==========================
+
         if (isAdmin && !admins.contains(user.getUid())) {
+
+            holder.btnPromote.setVisibility(View.VISIBLE);
+
+            holder.btnPromote.setOnClickListener(v ->
+                    promoteListener.onPromote(user));
+
+        } else {
+
+            holder.btnPromote.setVisibility(View.GONE);
+
+        }
+
+        // ==========================
+        // Remove Button
+        // ==========================
+
+        String myUid = FirebaseAuth.getInstance()
+                .getCurrentUser()
+                .getUid();
+
+        if (isAdmin && !user.getUid().equals(myUid)) {
 
             holder.btnRemove.setVisibility(View.VISIBLE);
 
@@ -94,6 +142,15 @@ public class GroupMemberAdapter
 
     }
 
+    public void updateAdmins(List<String> admins, boolean isAdmin) {
+
+        this.admins.clear();
+        this.admins.addAll(admins);
+
+        this.isAdmin = isAdmin;
+
+        notifyDataSetChanged();
+    }
     @Override
     public int getItemCount() {
         return members.size();
@@ -109,6 +166,7 @@ public class GroupMemberAdapter
         TextView tvName;
 
         TextView tvRole;
+        ImageView btnPromote;
         public MemberViewHolder(@NonNull View itemView) {
             super(itemView);
 
@@ -116,6 +174,7 @@ public class GroupMemberAdapter
             tvName = itemView.findViewById(R.id.tvName);
             btnRemove = itemView.findViewById(R.id.btnRemove);
             tvRole = itemView.findViewById(R.id.tvRole);
+            btnPromote = itemView.findViewById(R.id.btnPromote);
         }
     }
 }

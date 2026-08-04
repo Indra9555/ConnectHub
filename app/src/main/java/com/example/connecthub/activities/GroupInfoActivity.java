@@ -80,7 +80,8 @@ public class GroupInfoActivity extends AppCompatActivity {
                 members,
                 admins,
                 isAdmin,
-                this::removeMember
+                this::removeMember,
+                this::promoteMember
         );
 
         recyclerMembers.setLayoutManager(
@@ -117,7 +118,7 @@ public class GroupInfoActivity extends AppCompatActivity {
                             group.getMembersCount() + " Members"
                     );
 
-                    admins = group.getAdmins();
+                    adapter.updateAdmins(group.getAdmins(), isAdmin);
 
                     Glide.with(this)
                             .load(group.getGroupImage())
@@ -154,6 +155,43 @@ public class GroupInfoActivity extends AppCompatActivity {
                                 android.widget.Toast.makeText(
                                         this,
                                         user.getName() + " removed",
+                                        android.widget.Toast.LENGTH_SHORT
+                                ).show();
+
+                                loadGroupInfo();
+
+                            });
+
+                });
+
+    }
+    private void promoteMember(User user) {
+
+        firestore.collection("Groups")
+                .document(groupId)
+                .get()
+                .addOnSuccessListener(document -> {
+
+                    Group group = document.toObject(Group.class);
+
+                    if (group == null) return;
+
+                    List<String> admins = group.getAdmins();
+
+                    if (admins.contains(user.getUid())) {
+                        return;
+                    }
+
+                    admins.add(user.getUid());
+
+                    firestore.collection("Groups")
+                            .document(groupId)
+                            .update("admins", admins)
+                            .addOnSuccessListener(unused -> {
+
+                                android.widget.Toast.makeText(
+                                        this,
+                                        user.getName() + " is now an Admin",
                                         android.widget.Toast.LENGTH_SHORT
                                 ).show();
 
