@@ -111,7 +111,7 @@ public class AddGroupMemberActivity extends AppCompatActivity {
 
                     if (group == null) return;
 
-                    List<String> members = group.getMembers();
+                    List<String> members = new ArrayList<>(group.getMembers());
 
                     if (members.contains(user.getUid())) {
                         return;
@@ -119,10 +119,26 @@ public class AddGroupMemberActivity extends AppCompatActivity {
 
                     members.add(user.getUid());
 
+                    // ============================
+                    // Save new join timestamp
+                    // ============================
+                    java.util.Map<String, Long> memberJoinedAt =
+                            group.getMemberJoinedAt();
+
+                    if (memberJoinedAt == null) {
+                        memberJoinedAt = new java.util.HashMap<>();
+                    }
+
+                    memberJoinedAt.put(
+                            user.getUid(),
+                            System.currentTimeMillis()
+                    );
+
                     firestore.collection("Groups")
                             .document(groupId)
                             .update(
                                     "members", members,
+                                    "memberJoinedAt", memberJoinedAt,
                                     "membersCount", members.size()
                             )
                             .addOnSuccessListener(unused -> {

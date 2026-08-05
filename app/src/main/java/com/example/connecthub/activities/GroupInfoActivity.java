@@ -142,20 +142,27 @@ public class GroupInfoActivity extends AppCompatActivity {
 
                     if (group == null) return;
 
+                    // Remove from members
                     group.getMembers().remove(user.getUid());
+
+                    // Remove admin privileges if the user was an admin
+                    if (group.getAdmins() != null) {
+                        group.getAdmins().remove(user.getUid());
+                    }
 
                     firestore.collection("Groups")
                             .document(groupId)
                             .update(
                                     "members", group.getMembers(),
+                                    "admins", group.getAdmins(),
                                     "membersCount", group.getMembers().size()
                             )
                             .addOnSuccessListener(unused -> {
 
-                                android.widget.Toast.makeText(
+                                Toast.makeText(
                                         this,
                                         user.getName() + " removed",
-                                        android.widget.Toast.LENGTH_SHORT
+                                        Toast.LENGTH_SHORT
                                 ).show();
 
                                 loadGroupInfo();
@@ -244,14 +251,81 @@ public class GroupInfoActivity extends AppCompatActivity {
 
                     if (group == null) return;
 
-                    List<String> members = group.getMembers();
+                    List<String> members =
+                            new ArrayList<>(group.getMembers());
 
+                    List<String> admins =
+                            new ArrayList<>(group.getAdmins());
+
+                    List<String> formerMembers =
+                            new ArrayList<>(
+                                    group.getFormerMembers() == null
+                                            ? new ArrayList<>()
+                                            : group.getFormerMembers()
+                            );
+
+                    // Remove yourself from members
                     members.remove(uid);
+
+                    // Remove admin privileges
+                    admins.remove(uid);
+
+                    // Save as former member
+                    if (!formerMembers.contains(uid)) {
+                        formerMembers.add(uid);
+                    }
+
+                    // If group becomes empty -> delete it
+                    if (members.isEmpty()) {
+
+                        firestore.collection("Groups")
+                                .document(groupId)
+                                .delete()
+                                .addOnSuccessListener(unused -> {
+
+                                    Toast.makeText(
+                                            this,
+                                            "Group deleted",
+                                            Toast.LENGTH_SHORT
+                                    ).show();
+
+                                    Intent intent = new Intent(
+                                            this,
+                                            GroupListActivity.class
+                                    );
+
+                                    intent.addFlags(
+                                            Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                                    | Intent.FLAG_ACTIVITY_NEW_TASK
+                                    );
+
+                                    startActivity(intent);
+                                    finish();
+
+                                });
+
+                        return;
+                    }
+
+                    // Always keep at least one admin
+                    if (admins.isEmpty()) {
+                        admins.add(members.get(0));
+                    }
+
+                    // Transfer ownership if creator left
+                    String createdBy = group.getCreatedBy();
+
+                    if (createdBy != null && createdBy.equals(uid)) {
+                        createdBy = admins.get(0);
+                    }
 
                     firestore.collection("Groups")
                             .document(groupId)
                             .update(
                                     "members", members,
+                                    "admins", admins,
+                                    "formerMembers", formerMembers,
+                                    "createdBy", createdBy,
                                     "membersCount", members.size()
                             )
                             .addOnSuccessListener(unused -> {
@@ -262,6 +336,17 @@ public class GroupInfoActivity extends AppCompatActivity {
                                         Toast.LENGTH_SHORT
                                 ).show();
 
+                                Intent intent = new Intent(
+                                        this,
+                                        GroupListActivity.class
+                                );
+
+                                intent.addFlags(
+                                        Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                                | Intent.FLAG_ACTIVITY_NEW_TASK
+                                );
+
+                                startActivity(intent);
                                 finish();
 
                             });

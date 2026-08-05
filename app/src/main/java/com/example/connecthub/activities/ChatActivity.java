@@ -56,6 +56,7 @@ import com.example.connecthub.chat.TypingManager;
 import com.example.connecthub.chat.WaveformGenerator;
 import com.example.connecthub.helpers.ChatHelper;
 import com.example.connecthub.helpers.SwipeToReplyCallback;
+import com.example.connecthub.models.Group;
 import com.example.connecthub.models.Message;
 import com.example.connecthub.chat.ChatUploadManager;
 import com.google.android.material.appbar.MaterialToolbar;
@@ -63,6 +64,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import android.os.Handler;
 import android.os.Looper;
@@ -98,9 +100,11 @@ public class ChatActivity extends AppCompatActivity {
     private PresenceManager presenceManager;
     private TextView tvChatName;
     private TextView tvUserStatus;
+    private boolean groupMessagesLoaded = false;
 
     private MaterialToolbar chatToolbar;
     private RecyclerView recyclerMessages;
+    private ListenerRegistration groupMessageListener;
     private EditText etMessage;
     private ImageButton btnSend;
     private boolean firstLoad = true;
@@ -111,6 +115,7 @@ public class ChatActivity extends AppCompatActivity {
 
     private TextView tvRecordingTime;
     private TextView tvSlideCancel;
+    private boolean isCurrentMember = true;
 
 
     private FirebaseFirestore firestore;
@@ -159,7 +164,7 @@ public class ChatActivity extends AppCompatActivity {
                         }
 
                     });
-    @SuppressLint("MissingInflatedId")
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -460,7 +465,15 @@ public class ChatActivity extends AppCompatActivity {
 
         });
 
-        loadMessages();
+        if (isGroup) {
+
+            verifyGroupMembership();
+
+        } else {
+
+            loadPrivateMessages();
+
+        }
         loadUserStatus();
         btnMic = findViewById(R.id.btnMic);
 
@@ -736,6 +749,16 @@ public class ChatActivity extends AppCompatActivity {
 
     }
     private void sendGroupMessage() {
+        if (!isCurrentMember) {
+
+            Toast.makeText(
+                    this,
+                    "You left this group",
+                    Toast.LENGTH_SHORT
+            ).show();
+
+            return;
+        }
 
         String text = etMessage.getText().toString().trim();
 
@@ -898,18 +921,96 @@ public class ChatActivity extends AppCompatActivity {
     }
     private void loadGroupMessages() {
 
+        String myUid = auth.getCurrentUser().getUid();
+
+        firestore.collection("Groups")
+                .document(groupId)
+                .get()
+                .addOnSuccessListener(groupDoc -> {
+
+                    if (!groupDoc.exists()) return;
+
+                    Group group = groupDoc.toObject(Group.class);
+
+                    if (group == null) return;
+
+                    Long joinTime = null;
+
+                    if (group.getMemberJoinedAt() != null) {
+                        joinTime = group.getMemberJoinedAt().get(myUid);
+                    }
+
+                    if (joinTime == null) {
+                        joinTime = 0L;
+                    }
+
+                    // Remove previous listener
+                    if (groupMessageListener != null) {
+                        groupMessageListener.remove();
+                    }
+
+                    groupMessageListener =
+                            firestore.collection("GroupMessages")
+                                    .document(groupId)
+                                    .collection("Messages")
+                                    .whereGreaterThanOrEqualTo("timestamp", joinTime)
+                                    .orderBy("timestamp", Query.Direction.ASCENDING)
+                                    .addSnapshotListener((value, error) -> {
+
+                                        if (error != null) {
+                                            error.printStackTrace();
+                                            return;
+                                        }
+
+                                        if (value == null) return;
+
+                                        List<Message> newList = new ArrayList<>();
+
+                                        for (DocumentSnapshot doc : value.getDocuments()) {
+
+                                            Message message = doc.toObject(Message.class);
+
+                                            if (message == null) continue;
+
+                                            message.setMessageId(doc.getId());
+
+                                            newList.add(message);
+                                        }
+
+                                        DiffUtil.DiffResult diff =
+                                                DiffUtil.calculateDiff(
+                                                        new MessageDiffCallback(
+                                                                messageList,
+                                                                newList
+                                                        )
+                                                );
+
+                                        messageList.clear();
+                                        messageList.addAll(newList);
+
+                                        adapter.rebuildMessageMap();
+
+                                        diff.dispatchUpdatesTo(adapter);
+
+                                        if (!messageList.isEmpty()) {
+                                            recyclerMessages.scrollToPosition(
+                                                    messageList.size() - 1
+                                            );
+                                        }
+
+                                    });
+
+                });
+
+    }
+    private void loadOldGroupMessages() {
+
         firestore.collection("GroupMessages")
                 .document(groupId)
                 .collection("Messages")
                 .orderBy("timestamp", Query.Direction.ASCENDING)
-                .addSnapshotListener((value, error) -> {
-
-                    if (error != null) {
-                        error.printStackTrace();
-                        return;
-                    }
-
-                    if (value == null) return;
+                .get()
+                .addOnSuccessListener(value -> {
 
                     List<Message> newList = new ArrayList<>();
 
@@ -926,7 +1027,10 @@ public class ChatActivity extends AppCompatActivity {
 
                     DiffUtil.DiffResult diff =
                             DiffUtil.calculateDiff(
-                                    new MessageDiffCallback(messageList, newList)
+                                    new MessageDiffCallback(
+                                            messageList,
+                                            newList
+                                    )
                             );
 
                     messageList.clear();
@@ -937,7 +1041,82 @@ public class ChatActivity extends AppCompatActivity {
                     diff.dispatchUpdatesTo(adapter);
 
                     if (!messageList.isEmpty()) {
-                        recyclerMessages.scrollToPosition(messageList.size() - 1);
+
+                        recyclerMessages.scrollToPosition(
+                                messageList.size() - 1
+                        );
+
+                    }
+
+                });
+
+    }
+    private void verifyGroupMembership() {
+
+        String myUid = auth.getCurrentUser().getUid();
+
+        firestore.collection("Groups")
+                .document(groupId)
+                .addSnapshotListener((document, error) -> {
+
+                    if (error != null) {
+                        Log.e("Group", error.getMessage());
+                        return;
+                    }
+
+                    if (document == null || !document.exists()) {
+
+                        Toast.makeText(
+                                ChatActivity.this,
+                                "Group no longer exists",
+                                Toast.LENGTH_SHORT
+                        ).show();
+
+                        finish();
+                        return;
+                    }
+
+                    Group group = document.toObject(Group.class);
+
+                    if (group == null) {
+                        finish();
+                        return;
+                    }
+
+
+                    if (group.getMembers().contains(myUid)) {
+
+                        isCurrentMember = true;
+
+                        layoutInput.setVisibility(View.VISIBLE);
+
+                        tvUserStatus.setText("👥 Group");
+
+
+                        loadGroupMessages();
+
+                    }
+
+
+                    else {
+
+                        isCurrentMember = false;
+
+                        layoutInput.setVisibility(View.GONE);
+
+                        tvUserStatus.setText("You left this group");
+
+                        // Stop live listener
+                        if (groupMessageListener != null) {
+
+                            groupMessageListener.remove();
+                            groupMessageListener = null;
+
+                        }
+
+
+                        loadOldGroupMessages();
+
                     }
 
                 });

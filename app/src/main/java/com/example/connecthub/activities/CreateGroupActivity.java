@@ -19,7 +19,9 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class CreateGroupActivity extends AppCompatActivity {
 
@@ -109,6 +111,15 @@ public class CreateGroupActivity extends AppCompatActivity {
 
         group.setMembers(members);
         group.setMembersCount(members.size());
+        Map<String, Long> memberJoinedAt = new HashMap<>();
+
+        long now = System.currentTimeMillis();
+
+        for (String uid : members) {
+            memberJoinedAt.put(uid, now);
+        }
+
+        group.setMemberJoinedAt(memberJoinedAt);
 
         List<String> admins = new ArrayList<>();
         admins.add(auth.getCurrentUser().getUid());
