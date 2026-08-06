@@ -125,6 +125,8 @@ public class ChatActivity extends AppCompatActivity {
     private FirebaseFirestore firestore;
     private FirebaseAuth auth;
 
+    private String myName = "";
+
     private String receiverId;
     private ImageView imgUser;
     private ImageButton btnImage;
@@ -288,6 +290,18 @@ public class ChatActivity extends AppCompatActivity {
 
         firestore = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
+        firestore.collection("Users")
+                .document(auth.getCurrentUser().getUid())
+                .get()
+                .addOnSuccessListener(doc -> {
+
+                    if (doc.exists()) {
+
+                        myName = doc.getString("name");
+
+                    }
+
+                });
 
         receiverId = getIntent().getStringExtra("uid");
         if (!isGroup) {
@@ -439,27 +453,38 @@ public class ChatActivity extends AppCompatActivity {
 
                 if (item.getItemId() == R.id.menu_delete_me) {
 
-                    Toast.makeText(this,
-                            "Delete for Me will be added later",
-                            Toast.LENGTH_SHORT).show();
-
+                    deleteForMe(message);
 
                     return true;
                 }
 
                 if (item.getItemId() == R.id.menu_delete_everyone) {
 
-                    firestore.collection("Messages")
-                            .document(message.getMessageId())
-                            .update(
-                                    "deleted", true,
-                                    "message", "",
-                                    "imageUrl", "",
-                                    "type", "text"
-                            );
+                    DocumentReference ref;
+
+                    if (isGroup) {
+
+                        ref = firestore.collection("GroupMessages")
+                                .document(groupId)
+                                .collection("Messages")
+                                .document(message.getMessageId());
+
+                    } else {
+
+                        ref = firestore.collection("Messages")
+                                .document(message.getMessageId());
+
+                    }
+
+                    ref.update(
+                            "deleted", true,
+                            "message", "",
+                            "imageUrl", "",
+                            "voiceUrl", "",
+                            "type", "text"
+                    );
 
                     return true;
-
                 }
 
                 return false;
@@ -592,6 +617,7 @@ public class ChatActivity extends AppCompatActivity {
                 "text",
                 System.currentTimeMillis()
         );
+        message.setSenderName(myName);
         if (replyingMessage != null) {
 
             message.setReplyMessageId(replyingMessage.getMessageId());
@@ -609,9 +635,8 @@ public class ChatActivity extends AppCompatActivity {
             message.setReplySender(
                     replyingMessage.getSenderId().equals(senderId)
                             ? "You"
-                            : tvChatName.getText().toString()
+                            : replyingMessage.getSenderName()
             );
-
             message.setReplyType(replyingMessage.getType());
 
             replyingMessage = null;
@@ -753,6 +778,7 @@ public class ChatActivity extends AppCompatActivity {
 
     }
     private void sendGroupMessage() {
+
         if (!isCurrentMember) {
 
             Toast.makeText(
@@ -780,8 +806,41 @@ public class ChatActivity extends AppCompatActivity {
                 "text",
                 System.currentTimeMillis()
         );
+        message.setSenderName(myName);
 
         message.setGroupId(groupId);
+
+        // ==========================
+        // Reply Support
+        // ==========================
+
+        if (replyingMessage != null) {
+
+            message.setReplyMessageId(replyingMessage.getMessageId());
+
+            if ("image".equals(replyingMessage.getType())) {
+
+                message.setReplyMessage("Photo");
+                message.setReplyImageUrl(replyingMessage.getImageUrl());
+
+            } else if ("voice".equals(replyingMessage.getType())) {
+
+                message.setReplyMessage("Voice message");
+
+            } else {
+
+                message.setReplyMessage(replyingMessage.getMessage());
+
+            }
+
+            message.setReplySender(
+                    replyingMessage.getSenderId().equals(senderId)
+                            ? "You"
+                            : replyingMessage.getSenderName()
+            );
+
+            message.setReplyType(replyingMessage.getType());
+        }
 
         firestore.collection("GroupMessages")
                 .document(groupId)
@@ -816,7 +875,6 @@ public class ChatActivity extends AppCompatActivity {
                         ).show()
 
                 );
-
     }
 
     private void loadMessages() {
@@ -907,6 +965,15 @@ public class ChatActivity extends AppCompatActivity {
                             newList.add(message);
                         }
                     }
+                    LinearLayoutManager lm =
+                            (LinearLayoutManager) recyclerMessages.getLayoutManager();
+
+                    boolean shouldScroll =
+                            lm != null &&
+                                    lm.findLastCompletelyVisibleItemPosition()
+                                            >= messageList.size() - 2;
+
+                    int oldSize = messageList.size();
 
                     DiffUtil.DiffResult diffResult =
                             DiffUtil.calculateDiff(
@@ -919,6 +986,13 @@ public class ChatActivity extends AppCompatActivity {
                     adapter.rebuildMessageMap();
 
                     diffResult.dispatchUpdatesTo(adapter);
+                    if (shouldScroll && newList.size() > oldSize) {
+
+                        recyclerMessages.scrollToPosition(
+                                newList.size() - 1
+                        );
+
+                    }
 
                 });
 
@@ -983,6 +1057,20 @@ public class ChatActivity extends AppCompatActivity {
                                             if (message == null) continue;
 
                                             message.setMessageId(doc.getId());
+                                            DocumentReference msgRef =
+                                                    doc.getReference();
+
+                                            Map<String, Long> readBy =
+                                                    message.getReadBy();
+
+                                            if (readBy == null || !readBy.containsKey(myUid)) {
+
+                                                msgRef.update(
+                                                        "readBy." + myUid,
+                                                        System.currentTimeMillis()
+                                                );
+
+                                            }
 
                                             long messageTime =
                                                     message.getTimestamp();
@@ -1025,6 +1113,15 @@ public class ChatActivity extends AppCompatActivity {
                                             }
 
                                         }
+                                        LinearLayoutManager lm =
+                                                (LinearLayoutManager) recyclerMessages.getLayoutManager();
+
+                                        boolean shouldScroll =
+                                                lm != null &&
+                                                        lm.findLastCompletelyVisibleItemPosition()
+                                                                >= messageList.size() - 2;
+
+                                        int oldSize = messageList.size();
 
                                         DiffUtil.DiffResult diff =
                                                 DiffUtil.calculateDiff(
@@ -1041,10 +1138,10 @@ public class ChatActivity extends AppCompatActivity {
 
                                         diff.dispatchUpdatesTo(adapter);
 
-                                        if (!messageList.isEmpty()) {
+                                        if (shouldScroll && newList.size() > oldSize) {
 
                                             recyclerMessages.scrollToPosition(
-                                                    messageList.size() - 1
+                                                    newList.size() - 1
                                             );
 
                                         }
@@ -1096,6 +1193,20 @@ public class ChatActivity extends AppCompatActivity {
                                     if (message == null) continue;
 
                                     message.setMessageId(doc.getId());
+                                    DocumentReference msgRef =
+                                            doc.getReference();
+
+                                    Map<String, Long> readBy =
+                                            message.getReadBy();
+
+                                    if (readBy == null || !readBy.containsKey(myUid)) {
+
+                                        msgRef.update(
+                                                "readBy." + myUid,
+                                                System.currentTimeMillis()
+                                        );
+
+                                    }
 
                                     long messageTime = message.getTimestamp();
 
@@ -1132,6 +1243,15 @@ public class ChatActivity extends AppCompatActivity {
                                     }
 
                                 }
+                                LinearLayoutManager lm =
+                                        (LinearLayoutManager) recyclerMessages.getLayoutManager();
+
+                                boolean shouldScroll =
+                                        lm != null &&
+                                                lm.findLastCompletelyVisibleItemPosition()
+                                                        >= messageList.size() - 2;
+
+                                int oldSize = messageList.size();
 
                                 DiffUtil.DiffResult diff =
                                         DiffUtil.calculateDiff(
@@ -1148,15 +1268,37 @@ public class ChatActivity extends AppCompatActivity {
 
                                 diff.dispatchUpdatesTo(adapter);
 
-                                if (!messageList.isEmpty()) {
+                                if (shouldScroll && newList.size() > oldSize) {
 
                                     recyclerMessages.scrollToPosition(
-                                            messageList.size() - 1
+                                            newList.size() - 1
                                     );
 
                                 }
 
                             });
+
+                });
+
+    }
+    private void deleteForMe(Message message) {
+
+        String uid = auth.getCurrentUser().getUid();
+
+        firestore.collection("DeletedMessages")
+                .document(uid)
+                .collection("Messages")
+                .document(message.getMessageId())
+                .set(new java.util.HashMap<String, Object>() {{
+                    put("deletedAt", FieldValue.serverTimestamp());
+                }})
+                .addOnSuccessListener(unused -> {
+
+                    Toast.makeText(
+                            ChatActivity.this,
+                            "Message deleted",
+                            Toast.LENGTH_SHORT
+                    ).show();
 
                 });
 
@@ -1543,9 +1685,21 @@ public class ChatActivity extends AppCompatActivity {
 
         String uid = auth.getCurrentUser().getUid();
 
-        DocumentReference messageRef = firestore
-                .collection("Messages")
-                .document(message.getMessageId());
+        DocumentReference messageRef;
+
+        if (isGroup) {
+
+            messageRef = firestore.collection("GroupMessages")
+                    .document(groupId)
+                    .collection("Messages")
+                    .document(message.getMessageId());
+
+        } else {
+
+            messageRef = firestore.collection("Messages")
+                    .document(message.getMessageId());
+
+        }
 
         messageRef.get().addOnSuccessListener(snapshot -> {
 

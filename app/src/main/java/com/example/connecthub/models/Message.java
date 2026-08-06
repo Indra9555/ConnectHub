@@ -3,7 +3,10 @@ package com.example.connecthub.models;
 
 import android.net.Uri;
 
+import java.util.Map;
+
 public class Message {
+    private String senderName = "";
 
     private String senderId;
     private String receiverId;
@@ -26,7 +29,7 @@ public class Message {
     private java.util.Map<String, String> reactions;
     private java.util.List<Integer> waveform;
     private String groupId = "";
-
+    private Map<String, Long> readBy;
 
     public Message() {
         // Required empty constructor for Firestore
@@ -213,6 +216,19 @@ public class Message {
 
     public void setGroupId(String groupId) {
         this.groupId = groupId;
+    }
+    public String getSenderName() {
+        return senderName;
+    }
+
+    public void setSenderName(String senderName) {
+        this.senderName = senderName;
+    }
+    public Map<String, Long> getReadBy() {
+        return readBy;
+    }
+    public void setReadBy(Map<String, Long> readBy) {
+        this.readBy = readBy;
     }
 }
 
