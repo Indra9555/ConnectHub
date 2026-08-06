@@ -80,51 +80,34 @@ public class GroupListActivity extends AppCompatActivity {
                 .getCurrentUser()
                 .getUid();
 
-        android.util.Log.d("GROUPS", "Current UID = " + uid);
-
         db.collection("Groups")
-                .whereArrayContains("members", uid)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
-
-                    android.util.Log.d(
-                            "GROUPS",
-                            "Found groups = " + queryDocumentSnapshots.size()
-                    );
 
                     groupList.clear();
 
                     for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
 
-                        android.util.Log.d(
-                                "GROUPS",
-                                "Document ID = " + doc.getId()
-                        );
-
-                        android.util.Log.d(
-                                "GROUPS",
-                                "Data = " + doc.getData().toString()
-                        );
-
                         Group group = doc.toObject(Group.class);
+
+                        if (group == null) continue;
 
                         group.setGroupId(doc.getId());
 
-                        groupList.add(group);
+                        // Show group if user has EVER been a member
+                        if (group.getMemberInfo() != null &&
+                                group.getMemberInfo().containsKey(uid)) {
+
+                            groupList.add(group);
+
+                        }
+
                     }
 
                     adapter.notifyDataSetChanged();
 
                 })
-                .addOnFailureListener(e -> {
-
-                    android.util.Log.e(
-                            "GROUPS",
-                            "Firestore Error",
-                            e
-                    );
-
-                });
+                .addOnFailureListener(Throwable::printStackTrace);
 
     }
 }

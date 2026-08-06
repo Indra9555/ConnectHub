@@ -16,12 +16,16 @@ import com.bumptech.glide.Glide;
 import com.example.connecthub.R;
 import com.example.connecthub.adapters.GroupMemberAdapter;
 import com.example.connecthub.models.Group;
+import com.example.connecthub.models.GroupMemberInfo;
+import com.example.connecthub.models.MembershipPeriod;
 import com.example.connecthub.models.User;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class GroupInfoActivity extends AppCompatActivity {
 
@@ -142,20 +146,76 @@ public class GroupInfoActivity extends AppCompatActivity {
 
                     if (group == null) return;
 
-                    // Remove from members
-                    group.getMembers().remove(user.getUid());
+                    List<String> members =
+                            new ArrayList<>(group.getMembers());
 
-                    // Remove admin privileges if the user was an admin
-                    if (group.getAdmins() != null) {
-                        group.getAdmins().remove(user.getUid());
+                    List<String> admins =
+                            new ArrayList<>(group.getAdmins());
+
+                    long now = System.currentTimeMillis();
+
+                    // Remove from current members/admins
+                    members.remove(user.getUid());
+                    admins.remove(user.getUid());
+
+                    // Keep at least one admin
+                    if (admins.isEmpty() && !members.isEmpty()) {
+                        admins.add(members.get(0));
+                    }
+
+                    // ==================================
+                    // Update MemberInfo
+                    // ==================================
+
+                    Map<String, GroupMemberInfo> memberInfo =
+                            group.getMemberInfo();
+
+                    if (memberInfo == null) {
+                        memberInfo = new HashMap<>();
+                    }
+
+                    GroupMemberInfo info =
+                            memberInfo.get(user.getUid());
+
+                    if (info != null) {
+                        info.setActive(false);
+                        memberInfo.put(user.getUid(), info);
+                    }
+
+                    // ==================================
+                    // Update Membership History
+                    // ==================================
+
+                    Map<String, List<MembershipPeriod>> memberHistory =
+                            group.getMemberHistory();
+
+                    if (memberHistory == null) {
+                        memberHistory = new HashMap<>();
+                    }
+
+                    List<MembershipPeriod> periods =
+                            memberHistory.get(user.getUid());
+
+                    if (periods != null && !periods.isEmpty()) {
+
+                        MembershipPeriod latest =
+                                periods.get(periods.size() - 1);
+
+                        if (latest.getLeftAt() == null) {
+                            latest.setLeftAt(now);
+                        }
+
+                        memberHistory.put(user.getUid(), periods);
                     }
 
                     firestore.collection("Groups")
                             .document(groupId)
                             .update(
-                                    "members", group.getMembers(),
-                                    "admins", group.getAdmins(),
-                                    "membersCount", group.getMembers().size()
+                                    "members", members,
+                                    "admins", admins,
+                                    "memberInfo", memberInfo,
+                                    "memberHistory", memberHistory,
+                                    "membersCount", members.size()
                             )
                             .addOnSuccessListener(unused -> {
 
@@ -251,31 +311,65 @@ public class GroupInfoActivity extends AppCompatActivity {
 
                     if (group == null) return;
 
+                    long now = System.currentTimeMillis();
+
                     List<String> members =
                             new ArrayList<>(group.getMembers());
 
                     List<String> admins =
                             new ArrayList<>(group.getAdmins());
 
-                    List<String> formerMembers =
-                            new ArrayList<>(
-                                    group.getFormerMembers() == null
-                                            ? new ArrayList<>()
-                                            : group.getFormerMembers()
-                            );
+                    Map<String, GroupMemberInfo> memberInfo =
+                            group.getMemberInfo() == null
+                                    ? new HashMap<>()
+                                    : new HashMap<>(group.getMemberInfo());
 
-                    // Remove yourself from members
+                    Map<String, List<MembershipPeriod>> memberHistory =
+                            group.getMemberHistory() == null
+                                    ? new HashMap<>()
+                                    : new HashMap<>(group.getMemberHistory());
+
+                    // Remove yourself
                     members.remove(uid);
-
-                    // Remove admin privileges
                     admins.remove(uid);
 
-                    // Save as former member
-                    if (!formerMembers.contains(uid)) {
-                        formerMembers.add(uid);
+                    // ===========================
+                    // MemberInfo
+                    // ===========================
+
+                    GroupMemberInfo info = memberInfo.get(uid);
+
+                    if (info != null) {
+
+                        info.setActive(false);
+
+                        memberInfo.put(uid, info);
+
                     }
 
-                    // If group becomes empty -> delete it
+                    // ===========================
+                    // Membership History
+                    // ===========================
+
+                    List<MembershipPeriod> periods =
+                            memberHistory.get(uid);
+
+                    if (periods != null && !periods.isEmpty()) {
+
+                        MembershipPeriod latest =
+                                periods.get(periods.size() - 1);
+
+                        if (latest.getLeftAt() == null) {
+
+                            latest.setLeftAt(now);
+
+                        }
+
+                        memberHistory.put(uid, periods);
+
+                    }
+
+                    // Delete group if empty
                     if (members.isEmpty()) {
 
                         firestore.collection("Groups")
@@ -289,10 +383,11 @@ public class GroupInfoActivity extends AppCompatActivity {
                                             Toast.LENGTH_SHORT
                                     ).show();
 
-                                    Intent intent = new Intent(
-                                            this,
-                                            GroupListActivity.class
-                                    );
+                                    Intent intent =
+                                            new Intent(
+                                                    this,
+                                                    GroupListActivity.class
+                                            );
 
                                     intent.addFlags(
                                             Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -307,16 +402,21 @@ public class GroupInfoActivity extends AppCompatActivity {
                         return;
                     }
 
-                    // Always keep at least one admin
+                    // Always keep one admin
                     if (admins.isEmpty()) {
+
                         admins.add(members.get(0));
+
                     }
 
-                    // Transfer ownership if creator left
+                    // Transfer ownership
                     String createdBy = group.getCreatedBy();
 
-                    if (createdBy != null && createdBy.equals(uid)) {
+                    if (createdBy != null &&
+                            createdBy.equals(uid)) {
+
                         createdBy = admins.get(0);
+
                     }
 
                     firestore.collection("Groups")
@@ -324,7 +424,8 @@ public class GroupInfoActivity extends AppCompatActivity {
                             .update(
                                     "members", members,
                                     "admins", admins,
-                                    "formerMembers", formerMembers,
+                                    "memberInfo", memberInfo,
+                                    "memberHistory", memberHistory,
                                     "createdBy", createdBy,
                                     "membersCount", members.size()
                             )
@@ -336,10 +437,11 @@ public class GroupInfoActivity extends AppCompatActivity {
                                         Toast.LENGTH_SHORT
                                 ).show();
 
-                                Intent intent = new Intent(
-                                        this,
-                                        GroupListActivity.class
-                                );
+                                Intent intent =
+                                        new Intent(
+                                                this,
+                                                GroupListActivity.class
+                                        );
 
                                 intent.addFlags(
                                         Intent.FLAG_ACTIVITY_CLEAR_TOP

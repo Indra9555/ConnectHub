@@ -57,6 +57,8 @@ import com.example.connecthub.chat.WaveformGenerator;
 import com.example.connecthub.helpers.ChatHelper;
 import com.example.connecthub.helpers.SwipeToReplyCallback;
 import com.example.connecthub.models.Group;
+import com.example.connecthub.models.GroupMemberInfo;
+import com.example.connecthub.models.MembershipPeriod;
 import com.example.connecthub.models.Message;
 import com.example.connecthub.chat.ChatUploadManager;
 import com.google.android.material.appbar.MaterialToolbar;
@@ -71,6 +73,8 @@ import android.os.Looper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
 import com.google.firebase.firestore.FieldValue;
 
 public class ChatActivity extends AppCompatActivity {
@@ -934,15 +938,16 @@ public class ChatActivity extends AppCompatActivity {
 
                     if (group == null) return;
 
-                    Long joinTime = null;
+                    Map<String, List<MembershipPeriod>> memberHistory =
+                            group.getMemberHistory();
 
-                    if (group.getMemberJoinedAt() != null) {
-                        joinTime = group.getMemberJoinedAt().get(myUid);
+                    if (memberHistory == null ||
+                            !memberHistory.containsKey(myUid)) {
+                        return;
                     }
 
-                    if (joinTime == null) {
-                        joinTime = 0L;
-                    }
+                    List<MembershipPeriod> periods =
+                            memberHistory.get(myUid);
 
                     // Remove previous listener
                     if (groupMessageListener != null) {
@@ -953,8 +958,10 @@ public class ChatActivity extends AppCompatActivity {
                             firestore.collection("GroupMessages")
                                     .document(groupId)
                                     .collection("Messages")
-                                    .whereGreaterThanOrEqualTo("timestamp", joinTime)
-                                    .orderBy("timestamp", Query.Direction.ASCENDING)
+                                    .orderBy(
+                                            "timestamp",
+                                            Query.Direction.ASCENDING
+                                    )
                                     .addSnapshotListener((value, error) -> {
 
                                         if (error != null) {
@@ -964,17 +971,59 @@ public class ChatActivity extends AppCompatActivity {
 
                                         if (value == null) return;
 
-                                        List<Message> newList = new ArrayList<>();
+                                        List<Message> newList =
+                                                new ArrayList<>();
 
-                                        for (DocumentSnapshot doc : value.getDocuments()) {
+                                        for (DocumentSnapshot doc :
+                                                value.getDocuments()) {
 
-                                            Message message = doc.toObject(Message.class);
+                                            Message message =
+                                                    doc.toObject(Message.class);
 
                                             if (message == null) continue;
 
                                             message.setMessageId(doc.getId());
 
-                                            newList.add(message);
+                                            long messageTime =
+                                                    message.getTimestamp();
+
+                                            boolean visible = false;
+
+                                            for (MembershipPeriod period : periods) {
+
+                                                long joined =
+                                                        period.getJoinedAt();
+
+                                                Long left =
+                                                        period.getLeftAt();
+
+                                                if (left == null) {
+
+                                                    if (messageTime >= joined) {
+
+                                                        visible = true;
+                                                        break;
+
+                                                    }
+
+                                                } else {
+
+                                                    if (messageTime >= joined &&
+                                                            messageTime <= left) {
+
+                                                        visible = true;
+                                                        break;
+
+                                                    }
+
+                                                }
+
+                                            }
+
+                                            if (visible) {
+                                                newList.add(message);
+                                            }
+
                                         }
 
                                         DiffUtil.DiffResult diff =
@@ -993,9 +1042,11 @@ public class ChatActivity extends AppCompatActivity {
                                         diff.dispatchUpdatesTo(adapter);
 
                                         if (!messageList.isEmpty()) {
+
                                             recyclerMessages.scrollToPosition(
                                                     messageList.size() - 1
                                             );
+
                                         }
 
                                     });
@@ -1005,48 +1056,107 @@ public class ChatActivity extends AppCompatActivity {
     }
     private void loadOldGroupMessages() {
 
-        firestore.collection("GroupMessages")
+        String myUid = auth.getCurrentUser().getUid();
+
+        firestore.collection("Groups")
                 .document(groupId)
-                .collection("Messages")
-                .orderBy("timestamp", Query.Direction.ASCENDING)
                 .get()
-                .addOnSuccessListener(value -> {
+                .addOnSuccessListener(groupDoc -> {
 
-                    List<Message> newList = new ArrayList<>();
+                    if (!groupDoc.exists()) return;
 
-                    for (DocumentSnapshot doc : value.getDocuments()) {
+                    Group group = groupDoc.toObject(Group.class);
 
-                        Message message = doc.toObject(Message.class);
+                    if (group == null) return;
 
-                        if (message == null) continue;
+                    Map<String, List<MembershipPeriod>> memberHistory =
+                            group.getMemberHistory();
 
-                        message.setMessageId(doc.getId());
-
-                        newList.add(message);
+                    if (memberHistory == null ||
+                            !memberHistory.containsKey(myUid)) {
+                        return;
                     }
 
-                    DiffUtil.DiffResult diff =
-                            DiffUtil.calculateDiff(
-                                    new MessageDiffCallback(
-                                            messageList,
-                                            newList
-                                    )
-                            );
+                    List<MembershipPeriod> periods =
+                            memberHistory.get(myUid);
 
-                    messageList.clear();
-                    messageList.addAll(newList);
+                    firestore.collection("GroupMessages")
+                            .document(groupId)
+                            .collection("Messages")
+                            .orderBy("timestamp", Query.Direction.ASCENDING)
+                            .get()
+                            .addOnSuccessListener(value -> {
 
-                    adapter.rebuildMessageMap();
+                                List<Message> newList = new ArrayList<>();
 
-                    diff.dispatchUpdatesTo(adapter);
+                                for (DocumentSnapshot doc : value.getDocuments()) {
 
-                    if (!messageList.isEmpty()) {
+                                    Message message = doc.toObject(Message.class);
 
-                        recyclerMessages.scrollToPosition(
-                                messageList.size() - 1
-                        );
+                                    if (message == null) continue;
 
-                    }
+                                    message.setMessageId(doc.getId());
+
+                                    long messageTime = message.getTimestamp();
+
+                                    boolean visible = false;
+
+                                    for (MembershipPeriod period : periods) {
+
+                                        long joined = period.getJoinedAt();
+
+                                        Long left = period.getLeftAt();
+
+                                        if (left == null) {
+
+                                            if (messageTime >= joined) {
+                                                visible = true;
+                                                break;
+                                            }
+
+                                        } else {
+
+                                            if (messageTime >= joined &&
+                                                    messageTime <= left) {
+
+                                                visible = true;
+                                                break;
+                                            }
+
+                                        }
+
+                                    }
+
+                                    if (visible) {
+                                        newList.add(message);
+                                    }
+
+                                }
+
+                                DiffUtil.DiffResult diff =
+                                        DiffUtil.calculateDiff(
+                                                new MessageDiffCallback(
+                                                        messageList,
+                                                        newList
+                                                )
+                                        );
+
+                                messageList.clear();
+                                messageList.addAll(newList);
+
+                                adapter.rebuildMessageMap();
+
+                                diff.dispatchUpdatesTo(adapter);
+
+                                if (!messageList.isEmpty()) {
+
+                                    recyclerMessages.scrollToPosition(
+                                            messageList.size() - 1
+                                    );
+
+                                }
+
+                            });
 
                 });
 
@@ -1067,7 +1177,7 @@ public class ChatActivity extends AppCompatActivity {
                     if (document == null || !document.exists()) {
 
                         Toast.makeText(
-                                ChatActivity.this,
+                                this,
                                 "Group no longer exists",
                                 Toast.LENGTH_SHORT
                         ).show();
@@ -1083,8 +1193,35 @@ public class ChatActivity extends AppCompatActivity {
                         return;
                     }
 
+                    Map<String, GroupMemberInfo> memberInfo =
+                            group.getMemberInfo();
 
-                    if (group.getMembers().contains(myUid)) {
+                    if (memberInfo == null ||
+                            !memberInfo.containsKey(myUid)) {
+
+                        layoutInput.setVisibility(View.GONE);
+
+                        tvUserStatus.setText("You left this group");
+
+                        if (groupMessageListener != null) {
+                            groupMessageListener.remove();
+                            groupMessageListener = null;
+                        }
+
+                        if (!groupMessagesLoaded) {
+
+                            groupMessagesLoaded = true;
+
+                            loadOldGroupMessages();
+
+                        }
+
+                        return;
+                    }
+
+                    GroupMemberInfo info = memberInfo.get(myUid);
+
+                    if (info.isActive()) {
 
                         isCurrentMember = true;
 
@@ -1092,13 +1229,13 @@ public class ChatActivity extends AppCompatActivity {
 
                         tvUserStatus.setText("👥 Group");
 
+                        if (groupMessageListener == null) {
 
-                        loadGroupMessages();
+                            loadGroupMessages();
 
-                    }
+                        }
 
-
-                    else {
+                    } else {
 
                         isCurrentMember = false;
 
@@ -1106,16 +1243,21 @@ public class ChatActivity extends AppCompatActivity {
 
                         tvUserStatus.setText("You left this group");
 
-                        // Stop live listener
                         if (groupMessageListener != null) {
 
                             groupMessageListener.remove();
+
                             groupMessageListener = null;
 
                         }
 
+                        if (!groupMessagesLoaded) {
 
-                        loadOldGroupMessages();
+                            groupMessagesLoaded = true;
+
+                            loadOldGroupMessages();
+
+                        }
 
                     }
 

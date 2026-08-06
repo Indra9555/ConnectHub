@@ -4,10 +4,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.example.connecthub.models.GroupMemberInfo;
+import com.example.connecthub.models.MembershipPeriod;
+
 
 public class Group {
 
     private String groupId;
+    private Map<String, GroupMemberInfo> memberInfo;
     private String groupName;
     private String groupImage;
     private String createdBy;
@@ -15,18 +19,19 @@ public class Group {
     private int membersCount;
 
     private List<String> members;
-    private Map<String, Long> memberJoinedAt;
+
 
     private List<String> admins;
 
     private String lastMessage;
     private long lastMessageTime;
-    private List<String> formerMembers = new ArrayList<>();
+    private Map<String, List<MembershipPeriod>> memberHistory;
+
 
     public Group() {
         members = new ArrayList<>();
         admins = new ArrayList<>();
-        memberJoinedAt = new HashMap<>();
+
     }
 
     public String getGroupId() {
@@ -107,17 +112,21 @@ public class Group {
     public void setMembersCount(int membersCount) {
         this.membersCount = membersCount;
     }
-    public List<String> getFormerMembers() {
-        return formerMembers;
+    public Map<String, GroupMemberInfo> getMemberInfo() {
+        return memberInfo;
     }
 
-    public void setFormerMembers(List<String> formerMembers) {
-        this.formerMembers = formerMembers;
+    public void setMemberInfo(Map<String, GroupMemberInfo> memberInfo) {
+        this.memberInfo = memberInfo;
     }
-    public Map<String, Long> getMemberJoinedAt() {
-        return memberJoinedAt;
+    public Map<String, List<MembershipPeriod>> getMemberHistory() {
+        return memberHistory;
     }
-    public void setMemberJoinedAt(Map<String, Long> memberJoinedAt) {
-        this.memberJoinedAt = memberJoinedAt;
+
+    public void setMemberHistory(Map<String, List<MembershipPeriod>> memberHistory) {
+        this.memberHistory = memberHistory;
     }
+
+
+
 }

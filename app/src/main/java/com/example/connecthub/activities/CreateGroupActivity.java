@@ -11,6 +11,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.connecthub.R;
 import com.example.connecthub.adapters.SelectMembersAdapter;
 import com.example.connecthub.models.Group;
+import com.example.connecthub.models.GroupMemberInfo;
+import com.example.connecthub.models.MembershipPeriod;
 import com.example.connecthub.models.User;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -87,9 +89,11 @@ public class CreateGroupActivity extends AppCompatActivity {
 
         if (groupName.isEmpty()) {
 
-            Toast.makeText(this,
+            Toast.makeText(
+                    this,
                     "Enter group name",
-                    Toast.LENGTH_SHORT).show();
+                    Toast.LENGTH_SHORT
+            ).show();
 
             return;
         }
@@ -97,54 +101,116 @@ public class CreateGroupActivity extends AppCompatActivity {
         List<String> members =
                 new ArrayList<>(adapter.getSelectedUsers());
 
-        members.add(auth.getCurrentUser().getUid());
+        String myUid =
+                auth.getCurrentUser().getUid();
+
+        if (!members.contains(myUid)) {
+            members.add(myUid);
+        }
 
         String groupId =
-                db.collection("Groups").document().getId();
+                db.collection("Groups")
+                        .document()
+                        .getId();
+
+        long now = System.currentTimeMillis();
 
         Group group = new Group();
 
         group.setGroupId(groupId);
         group.setGroupName(groupName);
-        group.setCreatedBy(auth.getCurrentUser().getUid());
-        group.setCreatedAt(System.currentTimeMillis());
+        group.setCreatedBy(myUid);
+        group.setCreatedAt(now);
 
         group.setMembers(members);
         group.setMembersCount(members.size());
-        Map<String, Long> memberJoinedAt = new HashMap<>();
 
-        long now = System.currentTimeMillis();
+        // =====================================
+        // Current Member Info
+        // =====================================
+
+        Map<String, GroupMemberInfo> memberInfo =
+                new HashMap<>();
 
         for (String uid : members) {
-            memberJoinedAt.put(uid, now);
+
+            GroupMemberInfo info =
+                    new GroupMemberInfo();
+
+            info.setJoinedAt(now);
+            info.setActive(true);
+
+            memberInfo.put(uid, info);
         }
 
-        group.setMemberJoinedAt(memberJoinedAt);
+        group.setMemberInfo(memberInfo);
 
-        List<String> admins = new ArrayList<>();
-        admins.add(auth.getCurrentUser().getUid());
+        // =====================================
+        // Membership History
+        // =====================================
+
+        Map<String, List<MembershipPeriod>> memberHistory =
+                new HashMap<>();
+
+        for (String uid : members) {
+
+            List<MembershipPeriod> periods =
+                    new ArrayList<>();
+
+            MembershipPeriod period =
+                    new MembershipPeriod();
+
+            period.setJoinedAt(now);
+            period.setLeftAt(null);
+
+            periods.add(period);
+
+            memberHistory.put(uid, periods);
+        }
+
+        group.setMemberHistory(memberHistory);
+
+        // =====================================
+        // Admins
+        // =====================================
+
+        List<String> admins =
+                new ArrayList<>();
+
+        admins.add(myUid);
 
         group.setAdmins(admins);
 
+        // =====================================
+        // Last Message
+        // =====================================
+
         group.setLastMessage("");
-        group.setLastMessageTime(System.currentTimeMillis());
+        group.setLastMessageTime(now);
 
         db.collection("Groups")
                 .document(groupId)
                 .set(group)
                 .addOnSuccessListener(unused -> {
 
-                    Toast.makeText(this,
+                    Toast.makeText(
+                            this,
                             "Group Created",
-                            Toast.LENGTH_SHORT).show();
+                            Toast.LENGTH_SHORT
+                    ).show();
 
                     finish();
 
                 })
                 .addOnFailureListener(e ->
-                        Toast.makeText(this,
+
+                        Toast.makeText(
+                                this,
                                 e.getMessage(),
-                                Toast.LENGTH_SHORT).show());
+                                Toast.LENGTH_SHORT
+                        ).show()
+
+                );
 
     }
 }
