@@ -162,5 +162,6 @@ public class ChatListActivity extends AppCompatActivity {
         super.onResume();
 
         loadChats();
+
     }
 }

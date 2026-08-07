@@ -6,6 +6,8 @@ import android.net.Uri;
 import java.util.Map;
 
 public class Message {
+    private java.util.Map<String, Boolean> deliveredTo;
+    private java.util.Map<String, Boolean> seenBy;
     private String senderName = "";
 
     private String senderId;
@@ -229,6 +231,21 @@ public class Message {
     }
     public void setReadBy(Map<String, Long> readBy) {
         this.readBy = readBy;
+    }
+    public java.util.Map<String, Boolean> getDeliveredTo() {
+        return deliveredTo;
+    }
+
+    public void setDeliveredTo(java.util.Map<String, Boolean> deliveredTo) {
+        this.deliveredTo = deliveredTo;
+    }
+
+    public java.util.Map<String, Boolean> getSeenBy() {
+        return seenBy;
+    }
+
+    public void setSeenBy(java.util.Map<String, Boolean> seenBy) {
+        this.seenBy = seenBy;
     }
 }
 

@@ -109,6 +109,7 @@ public class ChatActivity extends AppCompatActivity {
     private MaterialToolbar chatToolbar;
     private RecyclerView recyclerMessages;
     private ListenerRegistration groupMessageListener;
+    private ListenerRegistration deletedGroupMessagesListener;
     private EditText etMessage;
     private ImageButton btnSend;
     private boolean firstLoad = true;
@@ -126,6 +127,7 @@ public class ChatActivity extends AppCompatActivity {
     private FirebaseAuth auth;
 
     private String myName = "";
+    private ListenerRegistration deletedMessagesListener;
 
     private String receiverId;
     private ImageView imgUser;
@@ -451,12 +453,23 @@ public class ChatActivity extends AppCompatActivity {
                     return true;
                 }
 
+
                 if (item.getItemId() == R.id.menu_delete_me) {
 
-                    deleteForMe(message);
+                    if (isGroup) {
+
+                        deleteGroupMessageForMe(message);
+
+                    } else {
+
+                        deleteForMe(message);
+
+                    }
 
                     return true;
                 }
+
+
 
                 if (item.getItemId() == R.id.menu_delete_everyone) {
 
@@ -806,6 +819,7 @@ public class ChatActivity extends AppCompatActivity {
                 "text",
                 System.currentTimeMillis()
         );
+
         message.setSenderName(myName);
 
         message.setGroupId(groupId);
@@ -876,6 +890,49 @@ public class ChatActivity extends AppCompatActivity {
 
                 );
     }
+    private void markGroupMessagesAsSeen() {
+
+        if (!isCurrentMember || groupId == null) {
+            return;
+        }
+
+        String currentUid = auth.getCurrentUser().getUid();
+
+        firestore.collection("GroupMessages")
+                .document(groupId)
+                .collection("Messages")
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+
+                    for (DocumentSnapshot document : querySnapshot.getDocuments()) {
+
+                        Message message =
+                                document.toObject(Message.class);
+
+                        if (message == null) {
+                            continue;
+                        }
+
+                        // Don't mark our own messages as seen
+                        if (currentUid.equals(message.getSenderId())) {
+                            continue;
+                        }
+
+                        document.getReference().update(
+                                "seenBy." + currentUid,
+                                true
+                        );
+                    }
+
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(
+                            "GROUP_SEEN",
+                            "Failed to mark messages as seen",
+                            e
+                    );
+                });
+    }
 
     private void loadMessages() {
 
@@ -927,111 +984,53 @@ public class ChatActivity extends AppCompatActivity {
 
     }
 
+
     private void loadPrivateMessages() {
-
-        String senderId = auth.getCurrentUser().getUid();
-
-        firestore.collection("Messages")
-                .orderBy("timestamp", Query.Direction.ASCENDING)
-                .addSnapshotListener((value, error) -> {
-
-                    if (value == null) return;
-
-                    List<Message> newList = new ArrayList<>();
-
-                    for (DocumentSnapshot document : value.getDocuments()) {
-
-                        Message message = document.toObject(Message.class);
-
-                        if (message == null) continue;
-
-                        message.setMessageId(document.getId());
-
-                        if (message.getReceiverId().equals(senderId)
-                                && !message.isSeen()) {
-
-                            document.getReference().update("seen", true);
-                        }
-
-                        boolean chat1 =
-                                message.getSenderId().equals(senderId)
-                                        && message.getReceiverId().equals(receiverId);
-
-                        boolean chat2 =
-                                message.getSenderId().equals(receiverId)
-                                        && message.getReceiverId().equals(senderId);
-
-                        if (chat1 || chat2) {
-                            newList.add(message);
-                        }
-                    }
-                    LinearLayoutManager lm =
-                            (LinearLayoutManager) recyclerMessages.getLayoutManager();
-
-                    boolean shouldScroll =
-                            lm != null &&
-                                    lm.findLastCompletelyVisibleItemPosition()
-                                            >= messageList.size() - 2;
-
-                    int oldSize = messageList.size();
-
-                    DiffUtil.DiffResult diffResult =
-                            DiffUtil.calculateDiff(
-                                    new MessageDiffCallback(messageList, newList)
-                            );
-
-                    messageList.clear();
-                    messageList.addAll(newList);
-
-                    adapter.rebuildMessageMap();
-
-                    diffResult.dispatchUpdatesTo(adapter);
-                    if (shouldScroll && newList.size() > oldSize) {
-
-                        recyclerMessages.scrollToPosition(
-                                newList.size() - 1
-                        );
-
-                    }
-
-                });
-
-    }
-    private void loadGroupMessages() {
 
         String myUid = auth.getCurrentUser().getUid();
 
-        firestore.collection("Groups")
-                .document(groupId)
-                .get()
-                .addOnSuccessListener(groupDoc -> {
+        // Remove old deleted-message listener if one exists
+        if (deletedMessagesListener != null) {
+            deletedMessagesListener.remove();
+            deletedMessagesListener = null;
+        }
 
-                    if (!groupDoc.exists()) return;
+        /*
+         * Listen to messages deleted FOR THIS USER.
+         *
+         * Whenever deleteForMe() adds/removes a document here,
+         * this listener fires again and the chat is rebuilt.
+         */
+        deletedMessagesListener =
+                firestore.collection("DeletedMessages")
+                        .document(myUid)
+                        .collection("Messages")
+                        .addSnapshotListener((deletedSnapshot, deletedError) -> {
 
-                    Group group = groupDoc.toObject(Group.class);
+                            if (deletedError != null) {
+                                Log.e(
+                                        "DeletedMessages",
+                                        "Error loading deleted messages",
+                                        deletedError
+                                );
+                                return;
+                            }
 
-                    if (group == null) return;
+                            if (deletedSnapshot == null) return;
 
-                    Map<String, List<MembershipPeriod>> memberHistory =
-                            group.getMemberHistory();
+                            java.util.Set<String> deletedMessageIds =
+                                    new java.util.HashSet<>();
 
-                    if (memberHistory == null ||
-                            !memberHistory.containsKey(myUid)) {
-                        return;
-                    }
+                            for (DocumentSnapshot doc :
+                                    deletedSnapshot.getDocuments()) {
 
-                    List<MembershipPeriod> periods =
-                            memberHistory.get(myUid);
+                                deletedMessageIds.add(doc.getId());
+                            }
 
-                    // Remove previous listener
-                    if (groupMessageListener != null) {
-                        groupMessageListener.remove();
-                    }
-
-                    groupMessageListener =
-                            firestore.collection("GroupMessages")
-                                    .document(groupId)
-                                    .collection("Messages")
+                            /*
+                             * Now listen to the actual chat messages.
+                             */
+                            firestore.collection("Messages")
                                     .orderBy(
                                             "timestamp",
                                             Query.Direction.ASCENDING
@@ -1039,7 +1038,11 @@ public class ChatActivity extends AppCompatActivity {
                                     .addSnapshotListener((value, error) -> {
 
                                         if (error != null) {
-                                            error.printStackTrace();
+                                            Log.e(
+                                                    "Messages",
+                                                    "Error loading messages",
+                                                    error
+                                            );
                                             return;
                                         }
 
@@ -1048,82 +1051,126 @@ public class ChatActivity extends AppCompatActivity {
                                         List<Message> newList =
                                                 new ArrayList<>();
 
-                                        for (DocumentSnapshot doc :
+                                        for (DocumentSnapshot document :
                                                 value.getDocuments()) {
 
                                             Message message =
-                                                    doc.toObject(Message.class);
+                                                    document.toObject(
+                                                            Message.class
+                                                    );
 
                                             if (message == null) continue;
 
-                                            message.setMessageId(doc.getId());
-                                            DocumentReference msgRef =
-                                                    doc.getReference();
+                                            String messageId =
+                                                    document.getId();
 
-                                            Map<String, Long> readBy =
-                                                    message.getReadBy();
+                                            message.setMessageId(messageId);
 
-                                            if (readBy == null || !readBy.containsKey(myUid)) {
-
-                                                msgRef.update(
-                                                        "readBy." + myUid,
-                                                        System.currentTimeMillis()
-                                                );
-
+                                            /*
+                                             * ==================================
+                                             * DELETE FOR ME FILTER
+                                             * ==================================
+                                             *
+                                             * If this message exists inside
+                                             * DeletedMessages/{myUid}/Messages,
+                                             * don't add it to the RecyclerView.
+                                             */
+                                            if (deletedMessageIds.contains(
+                                                    messageId
+                                            )) {
+                                                continue;
                                             }
 
-                                            long messageTime =
-                                                    message.getTimestamp();
+                                            /*
+                                             * ==================================
+                                             * CHECK PRIVATE CHAT
+                                             * ==================================
+                                             */
 
-                                            boolean visible = false;
+                                            String messageSender =
+                                                    message.getSenderId();
 
-                                            for (MembershipPeriod period : periods) {
+                                            String messageReceiver =
+                                                    message.getReceiverId();
 
-                                                long joined =
-                                                        period.getJoinedAt();
-
-                                                Long left =
-                                                        period.getLeftAt();
-
-                                                if (left == null) {
-
-                                                    if (messageTime >= joined) {
-
-                                                        visible = true;
-                                                        break;
-
-                                                    }
-
-                                                } else {
-
-                                                    if (messageTime >= joined &&
-                                                            messageTime <= left) {
-
-                                                        visible = true;
-                                                        break;
-
-                                                    }
-
-                                                }
-
+                                            if (messageSender == null ||
+                                                    messageReceiver == null) {
+                                                continue;
                                             }
 
-                                            if (visible) {
-                                                newList.add(message);
+                                            boolean chat1 =
+                                                    messageSender.equals(myUid)
+                                                            &&
+                                                            messageReceiver.equals(
+                                                                    receiverId
+                                                            );
+
+                                            boolean chat2 =
+                                                    messageSender.equals(
+                                                            receiverId
+                                                    )
+                                                            &&
+                                                            messageReceiver.equals(
+                                                                    myUid
+                                                            );
+
+                                            if (!chat1 && !chat2) {
+                                                continue;
                                             }
 
+                                            /*
+                                             * ==================================
+                                             * MARK RECEIVED MESSAGE AS SEEN
+                                             * ==================================
+                                             */
+
+                                            if (messageReceiver.equals(myUid)
+                                                    && !message.isSeen()) {
+
+                                                document.getReference()
+                                                        .update(
+                                                                "seen",
+                                                                true
+                                                        );
+                                            }
+
+                                            newList.add(message);
                                         }
+
+                                        /*
+                                         * ==================================
+                                         * SCROLL LOGIC
+                                         * ==================================
+                                         */
+
                                         LinearLayoutManager lm =
-                                                (LinearLayoutManager) recyclerMessages.getLayoutManager();
+                                                (LinearLayoutManager)
+                                                        recyclerMessages
+                                                                .getLayoutManager();
 
-                                        boolean shouldScroll =
-                                                lm != null &&
-                                                        lm.findLastCompletelyVisibleItemPosition()
-                                                                >= messageList.size() - 2;
+                                        boolean shouldScroll = false;
 
-                                        int oldSize = messageList.size();
+                                        if (lm != null &&
+                                                !messageList.isEmpty()) {
 
-                                        DiffUtil.DiffResult diff =
+                                            int lastVisible =
+                                                    lm.findLastCompletelyVisibleItemPosition();
+
+                                            shouldScroll =
+                                                    lastVisible >=
+                                                            messageList.size() - 2;
+                                        }
+
+                                        int oldSize =
+                                                messageList.size();
+
+                                        /*
+                                         * ==================================
+                                         * DIFF UPDATE
+                                         * ==================================
+                                         */
+
+                                        DiffUtil.DiffResult diffResult =
                                                 DiffUtil.calculateDiff(
                                                         new MessageDiffCallback(
                                                                 messageList,
@@ -1136,21 +1183,386 @@ public class ChatActivity extends AppCompatActivity {
 
                                         adapter.rebuildMessageMap();
 
-                                        diff.dispatchUpdatesTo(adapter);
+                                        diffResult.dispatchUpdatesTo(adapter);
 
-                                        if (shouldScroll && newList.size() > oldSize) {
+                                        /*
+                                         * ==================================
+                                         * ONLY SCROLL IF A NEW MESSAGE
+                                         * WAS ADDED
+                                         * ==================================
+                                         */
+
+                                        if (shouldScroll &&
+                                                newList.size() > oldSize) {
 
                                             recyclerMessages.scrollToPosition(
                                                     newList.size() - 1
                                             );
-
                                         }
 
                                     });
 
-                });
-
+                        });
     }
+
+
+    private void loadGroupMessages() {
+
+        String myUid = auth.getCurrentUser().getUid();
+
+        firestore.collection("Groups")
+                .document(groupId)
+                .get()
+                .addOnSuccessListener(groupDoc -> {
+
+                    if (!groupDoc.exists()) return;
+
+                    Group group =
+                            groupDoc.toObject(Group.class);
+
+                    if (group == null) return;
+
+                    Map<String, List<MembershipPeriod>> memberHistory =
+                            group.getMemberHistory();
+
+                    if (memberHistory == null ||
+                            !memberHistory.containsKey(myUid)) {
+
+                        return;
+                    }
+
+                    List<MembershipPeriod> periods =
+                            memberHistory.get(myUid);
+
+                    /*
+                     * ==========================================
+                     * REMOVE OLD GROUP MESSAGE LISTENER
+                     * ==========================================
+                     */
+
+                    if (groupMessageListener != null) {
+
+                        groupMessageListener.remove();
+                        groupMessageListener = null;
+                    }
+
+                    /*
+                     * ==========================================
+                     * REMOVE OLD DELETED-MESSAGE LISTENER
+                     * ==========================================
+                     */
+
+                    if (deletedGroupMessagesListener != null) {
+
+                        deletedGroupMessagesListener.remove();
+                        deletedGroupMessagesListener = null;
+                    }
+
+                    /*
+                     * ==========================================
+                     * LISTEN TO "DELETE FOR ME" MESSAGES
+                     * ==========================================
+                     */
+
+                    deletedGroupMessagesListener =
+                            firestore.collection("DeletedGroupMessages")
+                                    .document(myUid)
+                                    .collection("Groups")
+                                    .document(groupId)
+                                    .collection("Messages")
+                                    .addSnapshotListener(
+                                            (deletedSnapshot,
+                                             deletedError) -> {
+
+                                                if (deletedError != null) {
+
+                                                    Log.e(
+                                                            "DeletedGroupMessages",
+                                                            "Error loading deleted group messages",
+                                                            deletedError
+                                                    );
+
+                                                    return;
+                                                }
+
+                                                if (deletedSnapshot == null) {
+                                                    return;
+                                                }
+
+                                                /*
+                                                 * Store all message IDs
+                                                 * deleted by THIS user.
+                                                 */
+
+                                                java.util.Set<String>
+                                                        deletedMessageIds =
+                                                        new java.util.HashSet<>();
+
+                                                for (DocumentSnapshot doc :
+                                                        deletedSnapshot
+                                                                .getDocuments()) {
+
+                                                    deletedMessageIds.add(
+                                                            doc.getId()
+                                                    );
+                                                }
+
+                                                /*
+                                                 * ==================================
+                                                 * GROUP MESSAGE LISTENER
+                                                 * ==================================
+                                                 */
+
+                                                groupMessageListener =
+                                                        firestore.collection(
+                                                                        "GroupMessages"
+                                                                )
+                                                                .document(groupId)
+                                                                .collection(
+                                                                        "Messages"
+                                                                )
+                                                                .orderBy(
+                                                                        "timestamp",
+                                                                        Query.Direction.ASCENDING
+                                                                )
+                                                                .addSnapshotListener(
+                                                                        (
+                                                                                value,
+                                                                                error
+                                                                        ) -> {
+
+                                                                            if (error != null) {
+
+                                                                                Log.e(
+                                                                                        "GroupMessages",
+                                                                                        "Error loading group messages",
+                                                                                        error
+                                                                                );
+
+                                                                                return;
+                                                                            }
+
+                                                                            if (value == null) {
+                                                                                return;
+                                                                            }
+
+                                                                            List<Message>
+                                                                                    newList =
+                                                                                    new ArrayList<>();
+
+                                                                            /*
+                                                                             * ==================================
+                                                                             * PROCESS EVERY GROUP MESSAGE
+                                                                             * ==================================
+                                                                             */
+
+                                                                            for (
+                                                                                    DocumentSnapshot doc :
+                                                                                    value.getDocuments()
+                                                                            ) {
+
+                                                                                Message message =
+                                                                                        doc.toObject(
+                                                                                                Message.class
+                                                                                        );
+
+                                                                                if (message == null) {
+                                                                                    continue;
+                                                                                }
+
+                                                                                String messageId =
+                                                                                        doc.getId();
+
+                                                                                message.setMessageId(
+                                                                                        messageId
+                                                                                );
+
+                                                                                /*
+                                                                                 * ==================================
+                                                                                 * DELETE FOR ME FILTER
+                                                                                 * ==================================
+                                                                                 *
+                                                                                 * If THIS USER deleted this
+                                                                                 * message, don't show it.
+                                                                                 */
+
+                                                                                if (
+                                                                                        deletedMessageIds.contains(
+                                                                                                messageId
+                                                                                        )
+                                                                                ) {
+
+                                                                                    continue;
+                                                                                }
+
+                                                                                /*
+                                                                                 * ==================================
+                                                                                 * MEMBERSHIP HISTORY FILTER
+                                                                                 * ==================================
+                                                                                 */
+
+                                                                                long messageTime =
+                                                                                        message.getTimestamp();
+
+                                                                                boolean visible =
+                                                                                        false;
+
+                                                                                for (
+                                                                                        MembershipPeriod period :
+                                                                                        periods
+                                                                                ) {
+
+                                                                                    if (period == null) {
+                                                                                        continue;
+                                                                                    }
+
+                                                                                    long joined =
+                                                                                            period.getJoinedAt();
+
+                                                                                    Long left =
+                                                                                            period.getLeftAt();
+
+                                                                                    /*
+                                                                                     * User is currently
+                                                                                     * in the group.
+                                                                                     */
+
+                                                                                    if (left == null) {
+
+                                                                                        if (
+                                                                                                messageTime >=
+                                                                                                        joined
+                                                                                        ) {
+
+                                                                                            visible = true;
+                                                                                            break;
+                                                                                        }
+
+                                                                                    }
+
+                                                                                    /*
+                                                                                     * User previously
+                                                                                     * left the group.
+                                                                                     */
+
+                                                                                    else {
+
+                                                                                        if (
+                                                                                                messageTime >=
+                                                                                                        joined
+                                                                                                        &&
+                                                                                                        messageTime <=
+                                                                                                                left
+                                                                                        ) {
+
+                                                                                            visible = true;
+                                                                                            break;
+                                                                                        }
+                                                                                    }
+                                                                                }
+
+                                                                                /*
+                                                                                 * Add only messages that
+                                                                                 * belong to one of the
+                                                                                 * user's membership periods.
+                                                                                 */
+
+                                                                                if (visible) {
+
+                                                                                    newList.add(
+                                                                                            message
+                                                                                    );
+                                                                                }
+                                                                            }
+
+                                                                            /*
+                                                                             * ==================================
+                                                                             * SCROLL POSITION
+                                                                             * ==================================
+                                                                             */
+
+                                                                            LinearLayoutManager lm =
+                                                                                    (
+                                                                                            LinearLayoutManager
+                                                                                            )
+                                                                                            recyclerMessages
+                                                                                                    .getLayoutManager();
+
+                                                                            boolean shouldScroll =
+                                                                                    false;
+
+                                                                            if (
+                                                                                    lm != null
+                                                                                            &&
+                                                                                            !messageList
+                                                                                                    .isEmpty()
+                                                                            ) {
+
+                                                                                int lastVisible =
+                                                                                        lm.findLastCompletelyVisibleItemPosition();
+
+                                                                                shouldScroll =
+                                                                                        lastVisible >=
+                                                                                                messageList.size() - 2;
+                                                                            }
+
+                                                                            int oldSize =
+                                                                                    messageList.size();
+
+                                                                            /*
+                                                                             * ==================================
+                                                                             * DIFFUTIL
+                                                                             * ==================================
+                                                                             */
+
+                                                                            DiffUtil.DiffResult diff =
+                                                                                    DiffUtil.calculateDiff(
+                                                                                            new MessageDiffCallback(
+                                                                                                    messageList,
+                                                                                                    newList
+                                                                                            )
+                                                                                    );
+
+                                                                            messageList.clear();
+                                                                            messageList.addAll(
+                                                                                    newList
+                                                                            );
+
+                                                                            adapter.rebuildMessageMap();
+
+                                                                            diff.dispatchUpdatesTo(
+                                                                                    adapter
+                                                                            );
+
+                                                                            /*
+                                                                             * ==================================
+                                                                             * SCROLL ONLY FOR NEW MESSAGE
+                                                                             * ==================================
+                                                                             */
+
+                                                                            if (
+                                                                                    shouldScroll
+                                                                                            &&
+                                                                                            newList.size() >
+                                                                                                    oldSize
+                                                                            ) {
+
+                                                                                recyclerMessages
+                                                                                        .scrollToPosition(
+                                                                                                newList.size() - 1
+                                                                                        );
+                                                                            }
+
+                                                                        }
+                                                                );
+
+                                            }
+                                    );
+
+                });
+    }
+
+
     private void loadOldGroupMessages() {
 
         String myUid = auth.getCurrentUser().getUid();
@@ -1285,6 +1697,18 @@ public class ChatActivity extends AppCompatActivity {
 
         String uid = auth.getCurrentUser().getUid();
 
+        if (message.getMessageId() == null ||
+                message.getMessageId().isEmpty()) {
+
+            Toast.makeText(
+                    this,
+                    "Unable to delete message",
+                    Toast.LENGTH_SHORT
+            ).show();
+
+            return;
+        }
+
         firestore.collection("DeletedMessages")
                 .document(uid)
                 .collection("Messages")
@@ -1300,9 +1724,69 @@ public class ChatActivity extends AppCompatActivity {
                             Toast.LENGTH_SHORT
                     ).show();
 
-                });
+                })
+                .addOnFailureListener(e -> {
 
+                    Toast.makeText(
+                            ChatActivity.this,
+                            "Delete failed: " + e.getMessage(),
+                            Toast.LENGTH_SHORT
+                    ).show();
+
+                });
     }
+
+    private void deleteGroupMessageForMe(Message message) {
+
+        String uid = auth.getCurrentUser().getUid();
+
+        String messageId = message.getMessageId();
+
+        if (messageId == null || messageId.isEmpty()) {
+
+            Toast.makeText(
+                    this,
+                    "Unable to delete message",
+                    Toast.LENGTH_SHORT
+            ).show();
+
+            return;
+        }
+
+        firestore.collection("DeletedGroupMessages")
+                .document(uid)
+                .collection("Groups")
+                .document(groupId)
+                .collection("Messages")
+                .document(messageId)
+                .set(new java.util.HashMap<String, Object>() {{
+                    put("deletedAt", FieldValue.serverTimestamp());
+                    put("groupId", groupId);
+                    put("messageId", messageId);
+                }})
+                .addOnSuccessListener(unused -> {
+
+                    Toast.makeText(
+                            ChatActivity.this,
+                            "Message deleted",
+                            Toast.LENGTH_SHORT
+                    ).show();
+
+                })
+                .addOnFailureListener(e -> {
+
+                    Toast.makeText(
+                            ChatActivity.this,
+                            "Delete failed: " + e.getMessage(),
+                            Toast.LENGTH_SHORT
+                    ).show();
+
+                });
+    }
+
+
+
+
     private void verifyGroupMembership() {
 
         String myUid = auth.getCurrentUser().getUid();
@@ -1605,9 +2089,132 @@ public class ChatActivity extends AppCompatActivity {
                 });
 
     }
+
     private void sendImageMessage(String imageUrl) {
 
-        String senderId = auth.getCurrentUser().getUid();
+        if (isGroup) {
+
+            if (!isCurrentMember) {
+
+                Toast.makeText(
+                        this,
+                        "You left this group",
+                        Toast.LENGTH_SHORT
+                ).show();
+
+                return;
+            }
+
+            String senderId =
+                    auth.getCurrentUser().getUid();
+
+            Message message = new Message(
+                    senderId,
+                    "",
+                    "",
+                    imageUrl,
+                    "image",
+                    System.currentTimeMillis()
+            );
+
+            message.setGroupId(groupId);
+            message.setUploading(false);
+
+            /*
+             * Reply information
+             */
+            if (replyingMessage != null) {
+
+                message.setReplyMessageId(
+                        replyingMessage.getMessageId()
+                );
+
+                message.setReplySender(
+                        replyingMessage.getSenderId()
+                                .equals(senderId)
+                                ? "You"
+                                : replyingMessage.getSenderName()
+                );
+
+                message.setReplyType(
+                        replyingMessage.getType()
+                );
+
+                if ("image".equals(
+                        replyingMessage.getType()
+                )) {
+
+                    message.setReplyMessage("Photo");
+
+                    message.setReplyImageUrl(
+                            replyingMessage.getImageUrl()
+                    );
+
+                } else if ("voice".equals(
+                        replyingMessage.getType()
+                )) {
+
+                    message.setReplyMessage(
+                            "🎤 Voice message"
+                    );
+
+                } else {
+
+                    message.setReplyMessage(
+                            replyingMessage.getMessage()
+                    );
+                }
+
+                replyingMessage = null;
+                layoutReply.setVisibility(View.GONE);
+            }
+
+            firestore.collection("GroupMessages")
+                    .document(groupId)
+                    .collection("Messages")
+                    .add(message)
+                    .addOnSuccessListener(documentReference -> {
+
+                        documentReference.update(
+                                "messageId",
+                                documentReference.getId()
+                        );
+
+                        /*
+                         * Update group preview
+                         */
+                        firestore.collection("Groups")
+                                .document(groupId)
+                                .update(
+                                        "lastMessage",
+                                        "📷 Photo",
+                                        "lastTimestamp",
+                                        System.currentTimeMillis()
+                                );
+
+                    })
+                    .addOnFailureListener(e -> {
+
+                        Toast.makeText(
+                                ChatActivity.this,
+                                "Image send failed: "
+                                        + e.getMessage(),
+                                Toast.LENGTH_SHORT
+                        ).show();
+
+                    });
+
+            return;
+        }
+
+        /*
+         * ==============================
+         * PRIVATE CHAT
+         * ==============================
+         */
+
+        String senderId =
+                auth.getCurrentUser().getUid();
 
         Message message = new Message(
                 senderId,
@@ -1617,16 +2224,32 @@ public class ChatActivity extends AppCompatActivity {
                 "image",
                 System.currentTimeMillis()
         );
+
         message.setUploading(false);
+
         firestore.collection("Messages")
                 .add(message)
-                .addOnSuccessListener(documentReference -> {}
+                .addOnSuccessListener(documentReference -> {
 
+                    documentReference.update(
+                            "messageId",
+                            documentReference.getId()
+                    );
 
+                })
+                .addOnFailureListener(e -> {
 
-                );
+                    Toast.makeText(
+                            ChatActivity.this,
+                            "Image send failed: "
+                                    + e.getMessage(),
+                            Toast.LENGTH_SHORT
+                    ).show();
 
+                });
     }
+
+
     private void showReactionPicker(View anchor, Message message) {
 
         View popupView = getLayoutInflater().inflate(
@@ -1984,12 +2607,152 @@ public class ChatActivity extends AppCompatActivity {
         );
     }
 
+
     private void sendVoiceMessage(
             File voiceFile,
             String voiceUrl,
             long durationMs
     ) {
-        String senderId = auth.getCurrentUser().getUid();
+
+        if (isGroup) {
+
+            if (!isCurrentMember) {
+
+                Toast.makeText(
+                        this,
+                        "You left this group",
+                        Toast.LENGTH_SHORT
+                ).show();
+
+                return;
+            }
+
+            String senderId =
+                    auth.getCurrentUser().getUid();
+
+            Message message = new Message(
+                    senderId,
+                    "",
+                    "",
+                    "",
+                    "voice",
+                    System.currentTimeMillis()
+            );
+
+            message.setGroupId(groupId);
+
+            message.setVoiceUrl(voiceUrl);
+
+            message.setVoiceDuration(durationMs);
+
+            message.setWaveform(
+                    WaveformGenerator.generate(voiceFile)
+            );
+
+            message.setUploading(false);
+
+            /*
+             * Reply information
+             */
+            if (replyingMessage != null) {
+
+                message.setReplyMessageId(
+                        replyingMessage.getMessageId()
+                );
+
+                message.setReplySender(
+                        replyingMessage.getSenderId()
+                                .equals(senderId)
+                                ? "You"
+                                : replyingMessage.getSenderName()
+                );
+
+                message.setReplyType(
+                        replyingMessage.getType()
+                );
+
+                if ("image".equals(
+                        replyingMessage.getType()
+                )) {
+
+                    message.setReplyMessage("Photo");
+
+                    message.setReplyImageUrl(
+                            replyingMessage.getImageUrl()
+                    );
+
+                } else if ("voice".equals(
+                        replyingMessage.getType()
+                )) {
+
+                    message.setReplyMessage(
+                            "🎤 Voice message"
+                    );
+
+                } else {
+
+                    message.setReplyMessage(
+                            replyingMessage.getMessage()
+                    );
+                }
+
+                replyingMessage = null;
+                layoutReply.setVisibility(View.GONE);
+            }
+
+            firestore.collection("GroupMessages")
+                    .document(groupId)
+                    .collection("Messages")
+                    .add(message)
+                    .addOnSuccessListener(documentReference -> {
+
+                        documentReference.update(
+                                "messageId",
+                                documentReference.getId()
+                        );
+
+                        firestore.collection("Groups")
+                                .document(groupId)
+                                .update(
+                                        "lastMessage",
+                                        "🎤 Voice message",
+                                        "lastTimestamp",
+                                        System.currentTimeMillis()
+                                );
+
+                        /*
+                         * We can delete the local recording after
+                         * Cloudinary upload + Firestore save.
+                         */
+                        if (voiceFile != null &&
+                                voiceFile.exists()) {
+
+                            voiceFile.delete();
+                        }
+
+                    })
+                    .addOnFailureListener(e -> {
+
+                        Toast.makeText(
+                                ChatActivity.this,
+                                "Voice send failed: "
+                                        + e.getMessage(),
+                                Toast.LENGTH_SHORT
+                        ).show();
+
+                    });
+
+            return;
+        }
+
+        /*
+         * ==========================================
+         * PRIVATE CHAT
+         * ==========================================
+         */
+
+        String senderId =
+                auth.getCurrentUser().getUid();
 
         Message message = new Message(
                 senderId,
@@ -2001,49 +2764,44 @@ public class ChatActivity extends AppCompatActivity {
         );
 
         message.setVoiceUrl(voiceUrl);
+
         message.setVoiceDuration(durationMs);
+
         message.setWaveform(
                 WaveformGenerator.generate(voiceFile)
         );
+
         message.setUploading(false);
 
         firestore.collection("Messages")
                 .add(message)
                 .addOnSuccessListener(documentReference -> {
-                    documentReference.update("messageId", documentReference.getId());
+
+                    documentReference.update(
+                            "messageId",
+                            documentReference.getId()
+                    );
 
                     firestore.collection("Users")
                             .document(senderId)
-                            .update("typingTo", "");
+                            .update(
+                                    "typingTo",
+                                    ""
+                            );
 
-                    firestore.collection("Users")
-                            .document(senderId)
-                            .get()
-                            .addOnSuccessListener(senderDoc -> {
-                                firestore.collection("Users")
-                                        .document(receiverId)
-                                        .get()
-                                        .addOnSuccessListener(receiverDoc -> {
-                                            String chatId = ChatHelper.getChatId(senderId, receiverId);
+                })
+                .addOnFailureListener(e -> {
 
-                                            java.util.Map<String, Object> chatMap = new java.util.HashMap<>();
-                                            chatMap.put("senderId", senderId);
-                                            chatMap.put("receiverId", receiverId);
-                                            chatMap.put("senderName", senderDoc.getString("name"));
-                                            chatMap.put("receiverName", receiverDoc.getString("name"));
-                                            chatMap.put("senderImage", senderDoc.getString("image"));
-                                            chatMap.put("receiverImage", receiverDoc.getString("image"));
-                                            chatMap.put("lastMessage", "🎤 Voice message");
-                                            chatMap.put("lastTimestamp", System.currentTimeMillis());
-                                            chatMap.put("senderUnread", 0);
-                                            chatMap.put("receiverUnread", 1);
+                    Toast.makeText(
+                            ChatActivity.this,
+                            "Voice send failed: "
+                                    + e.getMessage(),
+                            Toast.LENGTH_SHORT
+                    ).show();
 
-                                            firestore.collection("Chats")
-                                                    .document(chatId)
-                                                    .set(chatMap);
-                                        });
-                            });
                 });
     }
+
+
 
 }
