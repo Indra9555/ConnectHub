@@ -31,6 +31,8 @@ import java.util.List;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Map;
+
 import android.net.Uri;
 
 public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
@@ -43,6 +45,8 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     private static final int RECEIVED = 2;
 
     private final List<Message> messageList;
+    private boolean isGroupChat = false;
+    private int groupMemberCount = 0;
     private int lastAnimatedPosition = -1;
     private final java.util.HashMap<String, Message> messageMap = new java.util.HashMap<>();
 
@@ -55,6 +59,13 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         return messageList.get(position)
                 .getMessageId()
                 .hashCode();
+    }
+    public void setGroupChat(boolean groupChat) {
+        this.isGroupChat = groupChat;
+    }
+
+    public void setGroupMemberCount(int count) {
+        this.groupMemberCount = count;
     }
     public interface OnMessageLongClickListener {
         void onMessageLongClick(View anchor, Message message);
@@ -401,9 +412,120 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         });
 
     }
+
     private void bindSeen(TextView tvSeen, Message message) {
 
         if (tvSeen == null) return;
+
+        FirebaseAuth firebaseAuth = FirebaseAuth.getInstance();
+
+        if (firebaseAuth.getCurrentUser() == null) {
+            return;
+        }
+
+        String currentUid = firebaseAuth.getCurrentUser().getUid();
+
+        /*
+         * ==========================================
+         * GROUP MESSAGE
+         * ==========================================
+         */
+
+        if (isGroupChat) {
+
+            Map<String, Boolean> deliveredTo =
+                    message.getDeliveredTo();
+
+            Map<String, Boolean> seenBy =
+                    message.getSeenBy();
+
+            int deliveredCount = 0;
+            int seenCount = 0;
+
+            /*
+             * Count delivered members
+             */
+            if (deliveredTo != null) {
+
+                for (Boolean value : deliveredTo.values()) {
+
+                    if (Boolean.TRUE.equals(value)) {
+                        deliveredCount++;
+                    }
+                }
+            }
+
+            /*
+             * Count seen members
+             */
+            if (seenBy != null) {
+
+                for (Boolean value : seenBy.values()) {
+
+                    if (Boolean.TRUE.equals(value)) {
+                        seenCount++;
+                    }
+                }
+            }
+
+            /*
+             * ==========================================
+             * SENDER ONLY
+             * ==========================================
+             *
+             * Only sender has received/delivered it.
+             */
+
+            if (deliveredCount <= 1) {
+
+                tvSeen.setText("✓");
+                tvSeen.setTextColor(0xFF888888);
+
+                return;
+            }
+
+            /*
+             * ==========================================
+             * DELIVERED
+             * ==========================================
+             *
+             * At least one other group member
+             * has received the message.
+             */
+
+            tvSeen.setText("✓✓");
+
+            /*
+             * ==========================================
+             * SEEN BY EVERYONE
+             * ==========================================
+             *
+             * groupMemberCount includes the sender.
+             */
+
+            if (groupMemberCount > 0
+                    && seenCount >= groupMemberCount) {
+
+                tvSeen.setTextColor(0xFF2196F3);
+
+            } else {
+
+                /*
+                 * Delivered, but not everyone has seen it.
+                 */
+
+                tvSeen.setTextColor(0xFF888888);
+            }
+
+            return;
+        }
+
+
+        /*
+         * ==========================================
+         * PRIVATE MESSAGE
+         * ==========================================
+         */
 
         if (message.isSeen()) {
 
@@ -414,10 +536,9 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
             tvSeen.setText("✓");
             tvSeen.setTextColor(0xFF888888);
-
         }
-
     }
+
 
     private void attachDoubleTap(View target, Message message) {
 

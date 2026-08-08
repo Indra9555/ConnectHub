@@ -37,17 +37,39 @@ public class MessageDiffCallback extends DiffUtil.Callback {
     }
 
     @Override
-    public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
+    public boolean areContentsTheSame(
+            int oldItemPosition,
+            int newItemPosition
+    ) {
 
         Message oldMsg = oldList.get(oldItemPosition);
         Message newMsg = newList.get(newItemPosition);
 
-        return Objects.equals(oldMsg.getMessage(), newMsg.getMessage())
-                && Objects.equals(oldMsg.getImageUrl(), newMsg.getImageUrl())
-                && Objects.equals(oldMsg.getVoiceUrl(), newMsg.getVoiceUrl())
-                && Objects.equals(oldMsg.getReactionSummary(), newMsg.getReactionSummary())
+        return Objects.equals(
+                oldMsg.getMessage(),
+                newMsg.getMessage()
+        )
+                && Objects.equals(
+                oldMsg.getImageUrl(),
+                newMsg.getImageUrl()
+        )
+                && Objects.equals(
+                oldMsg.getVoiceUrl(),
+                newMsg.getVoiceUrl()
+        )
+                && Objects.equals(
+                oldMsg.getReactionSummary(),
+                newMsg.getReactionSummary()
+        )
+                && Objects.equals(
+                oldMsg.getDeliveredTo(),
+                newMsg.getDeliveredTo()
+        )
+                && Objects.equals(
+                oldMsg.getSeenBy(),
+                newMsg.getSeenBy()
+        )
                 && oldMsg.isSeen() == newMsg.isSeen()
                 && oldMsg.isDeleted() == newMsg.isDeleted();
-
     }
 }

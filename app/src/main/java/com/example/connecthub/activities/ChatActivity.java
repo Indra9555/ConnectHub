@@ -321,6 +321,14 @@ public class ChatActivity extends AppCompatActivity {
 
         messageList = new ArrayList<>();
         adapter = new MessageAdapter(messageList);
+        // ==========================================
+// GROUP DELIVERY / SEEN STATUS
+// ==========================================
+
+        if (isGroup) {
+            adapter.setGroupChat(true);
+        }
+
         adapter.setOnMessageDoubleTapListener(message -> {
 
             addReaction(message, "❤️");
@@ -346,20 +354,10 @@ public class ChatActivity extends AppCompatActivity {
         layoutManager.setStackFromEnd(true);
 
         recyclerMessages.setLayoutManager(layoutManager);
+
+
         recyclerMessages.setAdapter(adapter);
 
-        adapter.registerAdapterDataObserver(
-                new RecyclerView.AdapterDataObserver() {
-
-                    @Override
-                    public void onItemRangeInserted(int positionStart, int itemCount) {
-
-                        recyclerMessages.smoothScrollToPosition(
-                                adapter.getItemCount() - 1
-                        );
-                    }
-
-                });
 
         ItemTouchHelper itemTouchHelper =
                 new ItemTouchHelper(
@@ -809,6 +807,7 @@ public class ChatActivity extends AppCompatActivity {
             return;
         }
 
+        // Current user's UID
         String senderId = auth.getCurrentUser().getUid();
 
         Message message = new Message(
@@ -820,8 +819,28 @@ public class ChatActivity extends AppCompatActivity {
                 System.currentTimeMillis()
         );
 
+        // ==========================
+        // Delivery / Seen State
+        // ==========================
+
+        java.util.Map<String, Boolean> deliveredTo =
+                new java.util.HashMap<>();
+
+        java.util.Map<String, Boolean> seenBy =
+                new java.util.HashMap<>();
+
+        // Sender has obviously received and seen
+        // their own message.
+        deliveredTo.put(senderId, true);
+        seenBy.put(senderId, true);
+
+        message.setDeliveredTo(deliveredTo);
+        message.setSeenBy(seenBy);
+
+        // Sender name
         message.setSenderName(myName);
 
+        // Group ID
         message.setGroupId(groupId);
 
         // ==========================
@@ -830,12 +849,17 @@ public class ChatActivity extends AppCompatActivity {
 
         if (replyingMessage != null) {
 
-            message.setReplyMessageId(replyingMessage.getMessageId());
+            message.setReplyMessageId(
+                    replyingMessage.getMessageId()
+            );
 
             if ("image".equals(replyingMessage.getType())) {
 
                 message.setReplyMessage("Photo");
-                message.setReplyImageUrl(replyingMessage.getImageUrl());
+
+                message.setReplyImageUrl(
+                        replyingMessage.getImageUrl()
+                );
 
             } else if ("voice".equals(replyingMessage.getType())) {
 
@@ -843,8 +867,9 @@ public class ChatActivity extends AppCompatActivity {
 
             } else {
 
-                message.setReplyMessage(replyingMessage.getMessage());
-
+                message.setReplyMessage(
+                        replyingMessage.getMessage()
+                );
             }
 
             message.setReplySender(
@@ -853,8 +878,14 @@ public class ChatActivity extends AppCompatActivity {
                             : replyingMessage.getSenderName()
             );
 
-            message.setReplyType(replyingMessage.getType());
+            message.setReplyType(
+                    replyingMessage.getType()
+            );
         }
+
+        // ==========================
+        // Send Message
+        // ==========================
 
         firestore.collection("GroupMessages")
                 .document(groupId)
@@ -862,33 +893,37 @@ public class ChatActivity extends AppCompatActivity {
                 .add(message)
                 .addOnSuccessListener(documentReference -> {
 
+                    // Save Firestore document ID as messageId
                     documentReference.update(
                             "messageId",
                             documentReference.getId()
                     );
 
+                    // Clear input
                     etMessage.setText("");
 
+                    // Clear reply UI
                     replyingMessage = null;
                     layoutReply.setVisibility(View.GONE);
 
+                    // Update group's last message
                     firestore.collection("Groups")
                             .document(groupId)
                             .update(
-                                    "lastMessage", text,
-                                    "lastTimestamp", System.currentTimeMillis()
+                                    "lastMessage",
+                                    text,
+                                    "lastTimestamp",
+                                    System.currentTimeMillis()
                             );
-
                 })
-                .addOnFailureListener(e ->
+                .addOnFailureListener(e -> {
 
-                        Toast.makeText(
-                                ChatActivity.this,
-                                e.getMessage(),
-                                Toast.LENGTH_SHORT
-                        ).show()
-
-                );
+                    Toast.makeText(
+                            ChatActivity.this,
+                            e.getMessage(),
+                            Toast.LENGTH_SHORT
+                    ).show();
+                });
     }
     private void markGroupMessagesAsSeen() {
 
@@ -933,35 +968,86 @@ public class ChatActivity extends AppCompatActivity {
                     );
                 });
     }
-
     private void loadMessages() {
 
         if (isGroup) {
 
+            String myUid = auth.getCurrentUser().getUid();
+
             firestore.collection("GroupMessages")
                     .document(groupId)
                     .collection("Messages")
-                    .orderBy("timestamp", Query.Direction.ASCENDING)
+                    .orderBy(
+                            "timestamp",
+                            Query.Direction.ASCENDING
+                    )
                     .addSnapshotListener((value, error) -> {
+
+                        if (error != null) {
+                            Log.e(
+                                    "GroupMessages",
+                                    "Error loading messages",
+                                    error
+                            );
+                            return;
+                        }
 
                         if (value == null) return;
 
-                        List<Message> newList = new ArrayList<>();
+                        List<Message> newList =
+                                new ArrayList<>();
 
-                        for (DocumentSnapshot doc : value.getDocuments()) {
+                        for (DocumentSnapshot doc :
+                                value.getDocuments()) {
 
-                            Message message = doc.toObject(Message.class);
+                            Message message =
+                                    doc.toObject(Message.class);
 
                             if (message == null) continue;
 
-                            message.setMessageId(doc.getId());
+                            message.setMessageId(
+                                    doc.getId()
+                            );
 
                             newList.add(message);
                         }
 
+                        // ==========================================
+                        // CHECK CURRENT SCROLL POSITION
+                        // ==========================================
+
+                        LinearLayoutManager lm =
+                                (LinearLayoutManager)
+                                        recyclerMessages.getLayoutManager();
+
+                        final boolean wasNearBottom;
+
+
+                        int oldSize = messageList.size();
+
+                        if (lm != null && !messageList.isEmpty()) {
+
+                            int lastVisible =
+                                    lm.findLastVisibleItemPosition();
+
+                            wasNearBottom =
+                                    lastVisible >= messageList.size() - 2;
+
+                        } else {
+
+                            wasNearBottom = false;
+                        }
+
+                        // ==========================================
+                        // DIFFUTIL
+                        // ==========================================
+
                         DiffUtil.DiffResult diff =
                                 DiffUtil.calculateDiff(
-                                        new MessageDiffCallback(messageList, newList)
+                                        new MessageDiffCallback(
+                                                messageList,
+                                                newList
+                                        )
                                 );
 
                         messageList.clear();
@@ -971,19 +1057,102 @@ public class ChatActivity extends AppCompatActivity {
 
                         diff.dispatchUpdatesTo(adapter);
 
-                        recyclerMessages.scrollToPosition(messageList.size() - 1);
+                        // ==========================================
+                        // WAIT UNTIL RECYCLERVIEW IS UPDATED
+                        // ==========================================
+
+                        recyclerMessages.post(() -> {
+
+                            LinearLayoutManager layoutManager =
+                                    (LinearLayoutManager)
+                                            recyclerMessages.getLayoutManager();
+
+                            if (layoutManager == null) {
+                                return;
+                            }
+
+                            // ==========================================
+                            // MARK VISIBLE RECEIVED MESSAGES AS SEEN
+                            // ==========================================
+
+                            int firstVisible =
+                                    layoutManager
+                                            .findFirstVisibleItemPosition();
+
+                            int lastVisible =
+                                    layoutManager
+                                            .findLastVisibleItemPosition();
+
+                            if (firstVisible != RecyclerView.NO_POSITION &&
+                                    lastVisible != RecyclerView.NO_POSITION) {
+
+                                for (
+                                        int i = firstVisible;
+                                        i <= lastVisible &&
+                                                i < messageList.size();
+                                        i++
+                                ) {
+
+                                    Message visibleMessage =
+                                            messageList.get(i);
+
+                                    // Don't mark our own messages
+                                    if (myUid.equals(
+                                            visibleMessage.getSenderId()
+                                    )) {
+                                        continue;
+                                    }
+
+                                    java.util.Map<String, Boolean> seenBy =
+                                            visibleMessage.getSeenBy();
+
+                                    boolean alreadySeen =
+                                            seenBy != null &&
+                                                    Boolean.TRUE.equals(
+                                                            seenBy.get(myUid)
+                                                    );
+
+                                    if (alreadySeen) {
+                                        continue;
+                                    }
+
+                                    firestore.collection("GroupMessages")
+                                            .document(groupId)
+                                            .collection("Messages")
+                                            .document(
+                                                    visibleMessage.getMessageId()
+                                            )
+                                            .update(
+                                                    "seenBy." + myUid,
+                                                    true
+                                            );
+                                }
+                            }
+
+                            // ==========================================
+                            // SCROLL ONLY IF USER WAS AT BOTTOM
+                            // ==========================================
+
+                            if (wasNearBottom &&
+                                    newList.size() > oldSize) {
+
+                                recyclerMessages.scrollToPosition(
+                                        newList.size() - 1
+                                );
+                            }
+
+                        });
 
                     });
 
             return;
+
         } else {
 
             loadPrivateMessages();
 
         }
-
     }
-
 
     private void loadPrivateMessages() {
 
@@ -1221,6 +1390,16 @@ public class ChatActivity extends AppCompatActivity {
                             groupDoc.toObject(Group.class);
 
                     if (group == null) return;
+                    // ==========================================
+// GROUP DELIVERY / SEEN MEMBER COUNT
+// ==========================================
+
+                    if (group.getMembers() != null) {
+
+                        adapter.setGroupMemberCount(
+                                group.getMembers().size()
+                        );
+                    }
 
                     Map<String, List<MembershipPeriod>> memberHistory =
                             group.getMemberHistory();
@@ -1376,6 +1555,24 @@ public class ChatActivity extends AppCompatActivity {
                                                                                 message.setMessageId(
                                                                                         messageId
                                                                                 );
+                                                                                // Mark message as delivered to current user
+                                                                                if (!myUid.equals(message.getSenderId())) {
+
+                                                                                    Map<String, Boolean> deliveredTo =
+                                                                                            message.getDeliveredTo();
+
+                                                                                    boolean alreadyDelivered =
+                                                                                            deliveredTo != null &&
+                                                                                                    Boolean.TRUE.equals(deliveredTo.get(myUid));
+
+                                                                                    if (!alreadyDelivered) {
+
+                                                                                        doc.getReference().update(
+                                                                                                "deliveredTo." + myUid,
+                                                                                                true
+                                                                                        );
+                                                                                    }
+                                                                                }
 
                                                                                 /*
                                                                                  * ==================================
@@ -1682,12 +1879,14 @@ public class ChatActivity extends AppCompatActivity {
 
                                 if (shouldScroll && newList.size() > oldSize) {
 
-                                    recyclerMessages.scrollToPosition(
-                                            newList.size() - 1
-                                    );
+                                    recyclerMessages.post(() -> {
 
+                                        recyclerMessages.scrollToPosition(
+                                                newList.size() - 1
+                                        );
+
+                                    });
                                 }
-
                             });
 
                 });
