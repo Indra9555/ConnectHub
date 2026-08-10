@@ -494,25 +494,25 @@ ConnectHub
 ConnectHub follows a layered architecture separating UI, application logic, backend communication, and media handling.
 
 ```text
-                                  ┌───────────────────────────┐
+                         ┌───────────────────────────┐
                          │       ConnectHub App      │
                          │     Android Application   │
                          └─────────────┬─────────────┘
                                        │
                                        ▼
                     ┌──────────────────────────────────┐
-                    │          Presentation Layer       │
+                    │          Presentation Layer      │
                     │                                  │
-                    │  Activities                       │
-                    │  • MainActivity                   │
-                    │  • ChatActivity                   │
-                    │  • ProfileActivity                │
-                    │  • CreatePostActivity             │
-                    │  • GroupInfoActivity              │
-                    │  • NotificationActivity           │
-                    │  • SearchActivity                 │
-                    │  • Login / Register               │
-                    │  • Comments / Groups / etc.       │
+                    │  Activities                      │
+                    │  • MainActivity                  │
+                    │  • ChatActivity                  │
+                    │  • ProfileActivity               │
+                    │  • CreatePostActivity            │
+                    │  • GroupInfoActivity             │
+                    │  • NotificationActivity          │
+                    │  • SearchActivity                │
+                    │  • Login / Register              │
+                    │  • Comments / Groups / etc.      │
                     └───────────────┬──────────────────┘
                                     │
                     ┌───────────────┼──────────────────┐
@@ -540,10 +540,10 @@ ConnectHub follows a layered architecture separating UI, application logic, back
                          │ Comment                 │
                          │ Message                 │
                          │ Group                   │
-                         │ GroupMemberInfo          │
-                         │ MembershipPeriod         │
-                         │ Notification             │
-                         │ ChatUser                 │
+                         │ GroupMemberInfo         │
+                         │ MembershipPeriod        │
+                         │ Notification            │
+                         │ ChatUser                │
                          └────────────┬────────────┘
                                       │
                                       ▼
@@ -561,7 +561,7 @@ ConnectHub follows a layered architecture separating UI, application logic, back
         ┌──────────────────┐ ┌────────────────┐ ┌─────────────────┐
         │ Firebase         │ │   Cloudinary   │ │  FCM / Services │
         │                  │ │                │ │                 │
-        │ Authentication  │ │ Image Uploads  │ │ Notifications   │
+        │ Authentication   │ │ Image Uploads  │ │ Notifications   │
         │ Cloud Firestore  │ │ Media Storage  │ │ Messaging       │
         └──────────────────┘ └────────────────┘ └─────────────────┘     
 ```
