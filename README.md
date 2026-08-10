@@ -111,7 +111,7 @@ It helps support the project and motivates continued development.
 <p align="center">
   <img src="assets/screenshots/profile.jpeg" width="250" alt="ConnectHub Profile Screen">
   <img src="assets/screenshots/search.jpeg" width="250" alt="ConnectHub Search Screen">
-  <img src="assets/screenshots/notification.jpeg" width="250" alt="ConnectHub Notifications Screen">
+  <img src="assets/screenshots/notifications.jpeg" width="250" alt="ConnectHub Notifications Screen">
 </p>
 
 <p align="center">
