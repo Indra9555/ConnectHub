@@ -388,51 +388,182 @@ ConnectHub also includes social networking functionality.
 | **GitHub**                  | Source Code Management         |
 
 ---
-
 # 📂 Project Structure
 
 ```text
-app
+ConnectHub
 │
-├── activities
+├── app
+│   │
+│   ├── manifests
+│   │
+│   ├── kotlin+java
+│   │   └── com.example.connecthub
+│   │
+│   │       ├── activities
+│   │       │   ├── AddGroupMemberActivity
+│   │       │   ├── ChatActivity
+│   │       │   ├── ChatListActivity
+│   │       │   ├── CommentActivity
+│   │       │   ├── CreateGroupActivity
+│   │       │   ├── CreatePostActivity
+│   │       │   ├── EditProfileActivity
+│   │       │   ├── GroupInfoActivity
+│   │       │   ├── GroupListActivity
+│   │       │   ├── ImageViewerActivity
+│   │       │   ├── LoginActivity
+│   │       │   ├── MainActivity
+│   │       │   ├── NotificationActivity
+│   │       │   ├── ProfileActivity
+│   │       │   ├── RegisterActivity
+│   │       │   ├── SearchActivity
+│   │       │   └── SplashActivity
+│   │       │
+│   │       ├── adapters
+│   │       │   ├── AddMemberAdapter
+│   │       │   ├── ChatUserAdapter
+│   │       │   ├── CommentAdapter
+│   │       │   ├── GroupAdapter
+│   │       │   ├── GroupMemberAdapter
+│   │       │   ├── MessageAdapter
+│   │       │   ├── MessageDiffCallback
+│   │       │   ├── NotificationAdapter
+│   │       │   ├── PostAdapter
+│   │       │   ├── SelectMembersAdapter
+│   │       │   └── UserAdapter
+│   │       │
+│   │       ├── chat
+│   │       │   ├── ChatRepository
+│   │       │   ├── ChatUploadManager
+│   │       │   ├── PresenceManager
+│   │       │   ├── TypingManager
+│   │       │   ├── VoiceUploadManager
+│   │       │   └── WaveformGenerator
+│   │       │
+│   │       ├── firebase
+│   │       │   └── FirebaseManager
+│   │       │
+│   │       ├── helpers
+│   │       │   ├── ChatHelper
+│   │       │   ├── FollowHelper
+│   │       │   ├── LikeHelper
+│   │       │   ├── NotificationHelper
+│   │       │   ├── SwipeToReplyCallback
+│   │       │   └── TimeUtils
+│   │       │
+│   │       ├── managers
+│   │       │   └── ZegoManager
+│   │       │
+│   │       ├── models
+│   │       │   ├── ChatUser
+│   │       │   ├── Comment
+│   │       │   ├── Group
+│   │       │   ├── GroupMemberInfo
+│   │       │   ├── MembershipPeriod
+│   │       │   ├── Message
+│   │       │   ├── Notification
+│   │       │   ├── Post
+│   │       │   └── User
+│   │       │
+│   │       ├── network
+│   │       │   └── CloudinaryUploader
+│   │       │
+│   │       ├── repository
+│   │       │
+│   │       ├── services
+│   │       │   └── MyFirebaseMessagingService
+│   │       │
+│   │       ├── utils
+│   │       │   ├── CloudinaryConfig
+│   │       │   └── ValidationUtils
+│   │       │
+│   │       └── zego
+│   │           └── ZegoConfig
+│   │
+│   └── ConnectHubApp
 │
-├── adapters
+├── functions
 │
-├── firebase
+├── gradle
 │
-├── helpers
-│
-├── listeners
-│
-├── models
-│
-├── network
-│
-├── repository
-│
-├── services
-│
-└── utils
+└── README.md
 ```
-
----
 
 # 🏗 Architecture
 
 ConnectHub follows a layered architecture separating UI, application logic, backend communication, and media handling.
 
 ```text
-                    Android Activities
-                            │
-                            ▼
-                    Repository Layer
-                            │
-              ┌─────────────┼─────────────┐
-              ▼             ▼             ▼
-       Authentication   Cloud Firestore  Cloudinary
-              │             │             │
-              └─────────────┴─────────────┘
-                       Real-Time Backend
+                                  ┌───────────────────────────┐
+                         │       ConnectHub App      │
+                         │     Android Application   │
+                         └─────────────┬─────────────┘
+                                       │
+                                       ▼
+                    ┌──────────────────────────────────┐
+                    │          Presentation Layer       │
+                    │                                  │
+                    │  Activities                       │
+                    │  • MainActivity                   │
+                    │  • ChatActivity                   │
+                    │  • ProfileActivity                │
+                    │  • CreatePostActivity             │
+                    │  • GroupInfoActivity              │
+                    │  • NotificationActivity           │
+                    │  • SearchActivity                 │
+                    │  • Login / Register               │
+                    │  • Comments / Groups / etc.       │
+                    └───────────────┬──────────────────┘
+                                    │
+                    ┌───────────────┼──────────────────┐
+                    │               │                  │
+                    ▼               ▼                  ▼
+          ┌────────────────┐ ┌───────────────┐ ┌─────────────────┐
+          │    Adapters    │ │ Chat Managers │ │    Helpers      │
+          │                │ │               │ │                 │
+          │ PostAdapter    │ │ ChatRepository│ │ LikeHelper      │
+          │ MessageAdapter │ │ UploadManager │ │ FollowHelper    │
+          │ GroupAdapter   │ │ TypingManager │ │ ChatHelper      │
+          │ CommentAdapter │ │ PresenceMgr   │ │ Notification    │
+          │ UserAdapter    │ │ VoiceManager  │ │ SwipeToReply    │
+          └───────┬────────┘ │ WaveformGen.  │ └────────┬────────┘
+                  │          └───────┬───────┘          │
+                  │                  │                  │
+                  └──────────────────┼──────────────────┘
+                                     │
+                                     ▼
+                         ┌─────────────────────────┐
+                         │       Model Layer       │
+                         │                         │
+                         │ User                    │
+                         │ Post                    │
+                         │ Comment                 │
+                         │ Message                 │
+                         │ Group                   │
+                         │ GroupMemberInfo          │
+                         │ MembershipPeriod         │
+                         │ Notification             │
+                         │ ChatUser                 │
+                         └────────────┬────────────┘
+                                      │
+                                      ▼
+                     ┌─────────────────────────────────┐
+                     │       Data / Repository Layer   │
+                     │                                 │
+                     │ ChatRepository                  │
+                     │ FirebaseManager                 │
+                     │ Firestore Operations            │
+                     └───────────────┬─────────────────┘
+                                     │
+                  ┌──────────────────┼──────────────────┐
+                  │                  │                  │
+                  ▼                  ▼                  ▼
+        ┌──────────────────┐ ┌────────────────┐ ┌─────────────────┐
+        │ Firebase         │ │   Cloudinary   │ │  FCM / Services │
+        │                  │ │                │ │                 │
+        │ Authentication  │ │ Image Uploads  │ │ Notifications   │
+        │ Cloud Firestore  │ │ Media Storage  │ │ Messaging       │
+        └──────────────────┘ └────────────────┘ └─────────────────┘     
 ```
 
 ### Core Architecture Components
