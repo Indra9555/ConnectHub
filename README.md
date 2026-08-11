@@ -103,34 +103,36 @@ It helps support the project and motivates continued development.
 # 📸 Screenshots
 
 <p align="center">
-  <img src="assets/screenshots/login.jpeg" width="250" alt="ConnectHub Login Screen">
-  <img src="assets/screenshots/register.jpeg" width="250" alt="ConnectHub Register Screen">
-  <img src="assets/screenshots/home.jpeg" width="250" alt="ConnectHub Home Feed">
+  <img src="assets/screenshots/login.jpeg" width="220" alt="ConnectHub Login Screen">
+  <img src="assets/screenshots/register.jpeg" width="220" alt="ConnectHub Register Screen">
+  <img src="assets/screenshots/home.jpeg" width="220" alt="ConnectHub Home Feed">
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/profile.jpeg" width="250" alt="ConnectHub Profile Screen">
-  <img src="assets/screenshots/search.jpeg" width="250" alt="ConnectHub Search Screen">
-  <img src="assets/screenshots/notifications.jpeg" width="250" alt="ConnectHub Notifications Screen">
+  <img src="assets/screenshots/profile.jpeg" width="220" alt="ConnectHub Profile Screen">
+  <img src="assets/screenshots/search.jpeg" width="220" alt="ConnectHub Search Screen">
+  <img src="assets/screenshots/notifications.jpeg" width="220" alt="ConnectHub Notifications Screen">
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/chat.jpeg" width="250" alt="ConnectHub Chat Screen">
-  <img src="assets/screenshots/comments.jpeg" width="250" alt="ConnectHub Comments Screen">
+  <img src="assets/screenshots/chat.jpeg" width="220" alt="ConnectHub Private Chat Screen">
+  <img src="assets/screenshots/group.jpeg" width="220" alt="ConnectHub Group Chat Screen">
+  <img src="assets/screenshots/comments.jpeg" width="220" alt="ConnectHub Comments Screen">
 </p>
 
 ### 📱 Available Screens
 
-| Screen           | Description                 |
-| :--------------- | :-------------------------- |
-| 🔐 Login         | User authentication         |
-| 📝 Register      | New user registration       |
-| 🏠 Home          | Social media feed           |
-| 👤 Profile       | User profile and posts      |
-| 🔎 Search        | Search for users            |
+| Screen | Description |
+| :--- | :--- |
+| 🔐 Login | User authentication |
+| 📝 Register | New user registration |
+| 🏠 Home | Social media feed |
+| 👤 Profile | User profile and posts |
+| 🔎 Search | Search for users |
 | 🔔 Notifications | User activity notifications |
-| 💬 Chat          | Real-time messaging         |
-| 💭 Comments      | Post comment system         |
+| 💬 Private Chat | One-to-one real-time messaging |
+| 👥 Group Chat | Real-time group messaging |
+| 💭 Comments | Post comment system |
 
 ---
 
