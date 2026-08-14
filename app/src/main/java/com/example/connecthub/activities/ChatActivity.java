@@ -982,6 +982,10 @@ public class ChatActivity extends AppCompatActivity {
                             Query.Direction.ASCENDING
                     )
                     .addSnapshotListener((value, error) -> {
+                        Log.d(
+                                "GROUP_SEEN",
+                                "GROUP SNAPSHOT FIRED"
+                        );
 
                         if (error != null) {
                             Log.e(
@@ -1082,6 +1086,15 @@ public class ChatActivity extends AppCompatActivity {
                             int lastVisible =
                                     layoutManager
                                             .findLastVisibleItemPosition();
+                            Log.d(
+                                    "GROUP_SEEN",
+                                    "Visible range: first="
+                                            + firstVisible
+                                            + " last="
+                                            + lastVisible
+                                            + " total="
+                                            + messageList.size()
+                            );
 
                             if (firstVisible != RecyclerView.NO_POSITION &&
                                     lastVisible != RecyclerView.NO_POSITION) {
@@ -1095,6 +1108,16 @@ public class ChatActivity extends AppCompatActivity {
 
                                     Message visibleMessage =
                                             messageList.get(i);
+                                    Log.d(
+                                            "GROUP_SEEN",
+                                            "Checking message="
+                                                    + visibleMessage.getMessageId()
+                                                    + " sender="
+                                                    + visibleMessage.getSenderId()
+                                                    + " myUid="
+                                                    + myUid
+                                    );
+
 
                                     // Don't mark our own messages
                                     if (myUid.equals(
@@ -1111,10 +1134,20 @@ public class ChatActivity extends AppCompatActivity {
                                                     Boolean.TRUE.equals(
                                                             seenBy.get(myUid)
                                                     );
-
+                                    Log.d(
+                                            "GROUP_SEEN",
+                                            "alreadySeen="
+                                                    + alreadySeen
+                                                    + " for message="
+                                                    + visibleMessage.getMessageId()
+                                    );
                                     if (alreadySeen) {
                                         continue;
                                     }
+
+                                    // ==========================================
+                                    // MARK MESSAGE AS SEEN
+                                    // ==========================================
 
                                     firestore.collection("GroupMessages")
                                             .document(groupId)
@@ -1125,7 +1158,29 @@ public class ChatActivity extends AppCompatActivity {
                                             .update(
                                                     "seenBy." + myUid,
                                                     true
-                                            );
+                                            )
+                                            .addOnSuccessListener(unused -> {
+
+
+                                                Log.d(
+                                                        "GROUP_SEEN",
+                                                        "Marked seen: "
+                                                                + visibleMessage.getMessageId()
+                                                                + " by "
+                                                                + myUid
+                                                );
+
+                                            })
+                                            .addOnFailureListener(e -> {
+
+                                                Log.e(
+                                                        "GROUP_SEEN",
+                                                        "Failed to mark seen: "
+                                                                + visibleMessage.getMessageId(),
+                                                        e
+                                                );
+
+                                            });
                                 }
                             }
 
