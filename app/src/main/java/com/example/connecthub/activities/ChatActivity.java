@@ -72,8 +72,11 @@ import android.os.Handler;
 import android.os.Looper;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.google.firebase.firestore.FieldValue;
 
@@ -82,6 +85,8 @@ public class ChatActivity extends AppCompatActivity {
     private Handler recordingHandler = new Handler(Looper.getMainLooper());
 
     private Runnable recordingRunnable;
+    private final Set<String> seenUpdateInProgress =
+            new HashSet<>();
 
     private float startX;
     private boolean cancelRecording = false;
@@ -1161,7 +1166,6 @@ public class ChatActivity extends AppCompatActivity {
                                             )
                                             .addOnSuccessListener(unused -> {
 
-
                                                 Log.d(
                                                         "GROUP_SEEN",
                                                         "Marked seen: "
@@ -1169,6 +1173,33 @@ public class ChatActivity extends AppCompatActivity {
                                                                 + " by "
                                                                 + myUid
                                                 );
+
+                                                // ==========================================
+                                                // UPDATE LOCAL MESSAGE IMMEDIATELY
+                                                // ==========================================
+
+                                                if (visibleMessage.getSeenBy() == null) {
+                                                    visibleMessage.setSeenBy(
+                                                            new HashMap<>()
+                                                    );
+                                                }
+
+                                                visibleMessage.getSeenBy().put(
+                                                        myUid,
+                                                        true
+                                                );
+
+                                                int position =
+                                                        messageList.indexOf(
+                                                                visibleMessage
+                                                        );
+
+                                                if (position != -1) {
+
+                                                    adapter.notifyItemChanged(
+                                                            position
+                                                    );
+                                                }
 
                                             })
                                             .addOnFailureListener(e -> {
@@ -1181,6 +1212,7 @@ public class ChatActivity extends AppCompatActivity {
                                                 );
 
                                             });
+
                                 }
                             }
 
@@ -1782,9 +1814,112 @@ public class ChatActivity extends AppCompatActivity {
 
                                                                             adapter.rebuildMessageMap();
 
-                                                                            diff.dispatchUpdatesTo(
-                                                                                    adapter
-                                                                            );
+                                                                            diff.dispatchUpdatesTo(adapter);
+
+                                                                            /*
+                                                                             * ==========================================
+                                                                             * MARK VISIBLE RECEIVED MESSAGES AS SEEN
+                                                                             * ==========================================
+                                                                             */
+
+                                                                            recyclerMessages.post(() -> {
+
+                                                                                LinearLayoutManager layoutManager =
+                                                                                        (LinearLayoutManager)
+                                                                                                recyclerMessages.getLayoutManager();
+
+                                                                                if (layoutManager == null) {
+                                                                                    return;
+                                                                                }
+
+                                                                                int firstVisible =
+                                                                                        layoutManager.findFirstVisibleItemPosition();
+
+                                                                                int lastVisible =
+                                                                                        layoutManager.findLastVisibleItemPosition();
+
+                                                                                Log.d(
+                                                                                        "GROUP_SEEN",
+                                                                                        "Visible range: first="
+                                                                                                + firstVisible
+                                                                                                + " last="
+                                                                                                + lastVisible
+                                                                                                + " total="
+                                                                                                + messageList.size()
+                                                                                );
+
+                                                                                if (firstVisible == RecyclerView.NO_POSITION ||
+                                                                                        lastVisible == RecyclerView.NO_POSITION) {
+
+                                                                                    return;
+                                                                                }
+
+                                                                                for (
+                                                                                        int i = firstVisible;
+                                                                                        i <= lastVisible &&
+                                                                                                i < messageList.size();
+                                                                                        i++
+                                                                                ) {
+
+                                                                                    Message visibleMessage =
+                                                                                            messageList.get(i);
+
+                                                                                    if (myUid.equals(
+                                                                                            visibleMessage.getSenderId()
+                                                                                    )) {
+                                                                                        continue;
+                                                                                    }
+
+                                                                                    Map<String, Boolean> seenBy =
+                                                                                            visibleMessage.getSeenBy();
+
+                                                                                    boolean alreadySeen =
+                                                                                            seenBy != null &&
+                                                                                                    Boolean.TRUE.equals(
+                                                                                                            seenBy.get(myUid)
+                                                                                                    );
+
+                                                                                    if (alreadySeen) {
+                                                                                        continue;
+                                                                                    }
+
+                                                                                    DocumentReference messageRef =
+                                                                                            firestore.collection("GroupMessages")
+                                                                                                    .document(groupId)
+                                                                                                    .collection("Messages")
+                                                                                                    .document(
+                                                                                                            visibleMessage.getMessageId()
+                                                                                                    );
+
+                                                                                    messageRef.update(
+                                                                                                    "seenBy." + myUid,
+                                                                                                    true
+                                                                                            )
+                                                                                            .addOnSuccessListener(unused -> {
+
+                                                                                                Log.d(
+                                                                                                        "GROUP_SEEN",
+                                                                                                        "Marked seen: "
+                                                                                                                + visibleMessage.getMessageId()
+                                                                                                                + " by "
+                                                                                                                + myUid
+                                                                                                );
+
+                                                                                            })
+                                                                                            .addOnFailureListener(e -> {
+
+                                                                                                Log.e(
+                                                                                                        "GROUP_SEEN",
+                                                                                                        "Failed to mark seen: "
+                                                                                                                + visibleMessage.getMessageId(),
+                                                                                                        e
+                                                                                                );
+
+                                                                                            });
+                                                                                }
+
+                                                                            });
+
 
                                                                             /*
                                                                              * ==================================
