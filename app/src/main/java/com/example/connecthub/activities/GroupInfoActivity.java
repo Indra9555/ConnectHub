@@ -107,14 +107,15 @@ public class GroupInfoActivity extends AppCompatActivity {
                     if (!document.exists()) return;
 
                     Group group = document.toObject(Group.class);
+
+                    if (group == null) return;
+
                     String myUid = FirebaseAuth.getInstance()
                             .getCurrentUser()
                             .getUid();
 
-                    isAdmin = group.getAdmins().contains(myUid);
-
-
-                    if (group == null) return;
+                    isAdmin = group.getAdmins() != null &&
+                            group.getAdmins().contains(myUid);
 
                     tvGroupName.setText(group.getGroupName());
 
@@ -136,7 +137,14 @@ public class GroupInfoActivity extends AppCompatActivity {
 
     }
     private void removeMember(User user) {
-
+        if (!isAdmin) {
+            Toast.makeText(
+                    this,
+                    "Only admins can perform this action",
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
         firestore.collection("Groups")
                 .document(groupId)
                 .get()
@@ -147,10 +155,14 @@ public class GroupInfoActivity extends AppCompatActivity {
                     if (group == null) return;
 
                     List<String> members =
-                            new ArrayList<>(group.getMembers());
+                            group.getMembers() == null
+                                    ? new ArrayList<>()
+                                    : new ArrayList<>(group.getMembers());
 
                     List<String> admins =
-                            new ArrayList<>(group.getAdmins());
+                            group.getAdmins() == null
+                                    ? new ArrayList<>()
+                                    : new ArrayList<>(group.getAdmins());
 
                     long now = System.currentTimeMillis();
 
@@ -233,7 +245,14 @@ public class GroupInfoActivity extends AppCompatActivity {
 
     }
     private void promoteMember(User user) {
-
+        if (!isAdmin) {
+            Toast.makeText(
+                    this,
+                    "Only admins can perform this action",
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
         firestore.collection("Groups")
                 .document(groupId)
                 .get()
@@ -243,9 +262,24 @@ public class GroupInfoActivity extends AppCompatActivity {
 
                     if (group == null) return;
 
-                    List<String> admins = group.getAdmins();
+                    List<String> admins =
+                            group.getAdmins() == null
+                                    ? new ArrayList<>()
+                                    : new ArrayList<>(group.getAdmins());
 
                     if (admins.contains(user.getUid())) {
+                        return;
+                    }
+
+                    if (group.getMembers() == null ||
+                            !group.getMembers().contains(user.getUid())) {
+
+                        Toast.makeText(
+                                this,
+                                "User is not a group member",
+                                Toast.LENGTH_SHORT
+                        ).show();
+
                         return;
                     }
 

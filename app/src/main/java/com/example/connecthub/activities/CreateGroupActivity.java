@@ -3,7 +3,6 @@ package com.example.connecthub.activities;
 import android.os.Bundle;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -61,6 +60,11 @@ public class CreateGroupActivity extends AppCompatActivity {
 
     private void loadUsers() {
 
+        if (auth.getCurrentUser() == null) {
+            finish();
+            return;
+        }
+
         String currentUid = auth.getCurrentUser().getUid();
 
         db.collection("Users")
@@ -69,16 +73,28 @@ public class CreateGroupActivity extends AppCompatActivity {
 
                     userList.clear();
 
-                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                    for (QueryDocumentSnapshot doc :
+                            queryDocumentSnapshots) {
 
                         User user = doc.toObject(User.class);
 
-                        if (!user.getUid().equals(currentUid)) {
+                        if (user != null &&
+                                !currentUid.equals(user.getUid())) {
+
                             userList.add(user);
                         }
                     }
 
                     adapter.notifyDataSetChanged();
+
+                })
+                .addOnFailureListener(e -> {
+
+                    Toast.makeText(
+                            this,
+                            "Failed to load users",
+                            Toast.LENGTH_SHORT
+                    ).show();
 
                 });
     }
@@ -103,7 +119,16 @@ public class CreateGroupActivity extends AppCompatActivity {
 
         String myUid =
                 auth.getCurrentUser().getUid();
+        if (members.isEmpty()) {
 
+            Toast.makeText(
+                    this,
+                    "Select at least one member",
+                    Toast.LENGTH_SHORT
+            ).show();
+
+            return;
+        }
         if (!members.contains(myUid)) {
             members.add(myUid);
         }

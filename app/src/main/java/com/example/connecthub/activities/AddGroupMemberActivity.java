@@ -73,7 +73,10 @@ public class AddGroupMemberActivity extends AppCompatActivity {
 
                     if (group == null) return;
 
-                    List<String> currentMembers = group.getMembers();
+                    List<String> currentMembers =
+                            group.getMembers() == null
+                                    ? new ArrayList<>()
+                                    : new ArrayList<>(group.getMembers());
 
                     firestore.collection("Users")
                             .get()
@@ -118,7 +121,9 @@ public class AddGroupMemberActivity extends AppCompatActivity {
                     if (group == null) return;
 
                     List<String> members =
-                            new ArrayList<>(group.getMembers());
+                            group.getMembers() == null
+                                    ? new ArrayList<>()
+                                    : new ArrayList<>(group.getMembers());
 
                     if (!members.contains(user.getUid())) {
                         members.add(user.getUid());
@@ -147,6 +152,7 @@ public class AddGroupMemberActivity extends AppCompatActivity {
                     }
 
                     info.setJoinedAt(now);
+                    info.setLeftAt(null);
                     info.setActive(true);
 
                     memberInfo.put(user.getUid(), info);

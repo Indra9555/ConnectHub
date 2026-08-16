@@ -14,6 +14,7 @@ import com.example.connecthub.R;
 import com.example.connecthub.models.User;
 import com.google.firebase.auth.FirebaseAuth;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class GroupMemberAdapter
@@ -106,7 +107,9 @@ public class GroupMemberAdapter
         // Promote Button
         // ==========================
 
-        if (isAdmin && !admins.contains(user.getUid())) {
+        if (isAdmin &&
+                admins != null &&
+                !admins.contains(user.getUid())) {
 
             holder.btnPromote.setVisibility(View.VISIBLE);
 
@@ -144,8 +147,15 @@ public class GroupMemberAdapter
 
     public void updateAdmins(List<String> admins, boolean isAdmin) {
 
+        if (this.admins == null) {
+            this.admins = new ArrayList<>();
+        }
+
         this.admins.clear();
-        this.admins.addAll(admins);
+
+        if (admins != null) {
+            this.admins.addAll(admins);
+        }
 
         this.isAdmin = isAdmin;
 
