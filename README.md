@@ -92,14 +92,6 @@ It helps support the project and motivates continued development.
 
 </p>
 
----
-
-# 🎥 Demo
-
-> 🚧 Demo video coming soon.
-
----
-
 # 📸 Screenshots
 
 <p align="center">
