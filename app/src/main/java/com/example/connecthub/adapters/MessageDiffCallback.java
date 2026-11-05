@@ -30,9 +30,9 @@ public class MessageDiffCallback extends DiffUtil.Callback {
     @Override
     public boolean areItemsTheSame(int oldItemPosition, int newItemPosition) {
 
-        return oldList.get(oldItemPosition)
-                .getMessageId()
-                .equals(newList.get(newItemPosition).getMessageId());
+        return Objects.equals(
+                oldList.get(oldItemPosition).getMessageId(),
+                newList.get(newItemPosition).getMessageId());
 
     }
 
@@ -69,6 +69,8 @@ public class MessageDiffCallback extends DiffUtil.Callback {
                 oldMsg.getSeenBy(),
                 newMsg.getSeenBy()
         )
+                && Objects.equals(oldMsg.getSenderName(), newMsg.getSenderName())
+                && oldMsg.isPending() == newMsg.isPending()
                 && oldMsg.isSeen() == newMsg.isSeen()
                 && oldMsg.isDeleted() == newMsg.isDeleted();
     }

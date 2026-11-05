@@ -2,493 +2,307 @@ package com.example.connecthub.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.Button;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.connecthub.R;
 import com.example.connecthub.adapters.GroupMemberAdapter;
+import com.example.connecthub.helpers.GroupHelper;
 import com.example.connecthub.models.Group;
-import com.example.connecthub.models.GroupMemberInfo;
-import com.example.connecthub.models.MembershipPeriod;
 import com.example.connecthub.models.User;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldPath;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 
-public class GroupInfoActivity extends AppCompatActivity {
+public class GroupInfoActivity extends BaseActivity {
 
     private ImageView imgGroup;
     private TextView tvGroupName;
     private TextView tvMembersCount;
 
-    private RecyclerView recyclerMembers;
-
-    private Button btnAddMember;
-    private Button btnLeaveGroup;
-    private boolean isAdmin = false;
-
-    private FirebaseFirestore firestore;
+    private MaterialButton btnAddMember;
+    private MaterialButton btnLeaveGroup;
 
     private GroupMemberAdapter adapter;
 
     private final List<User> members = new ArrayList<>();
-    private List<String> admins = new ArrayList<>();
+    private final List<String> admins = new ArrayList<>();
+
+    private FirebaseFirestore firestore;
 
     private String groupId;
+    private String myUid;
+    private Group group;
+    private boolean isAdmin = false;
+    private boolean isMember = false;
 
+    /** incremented for every reload so late answers of an older load are ignored */
+    private int loadGeneration = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_group_info);
 
+        groupId = getIntent().getStringExtra("groupId");
+
+        if (groupId == null || FirebaseAuth.getInstance().getCurrentUser() == null) {
+            finish();
+            return;
+        }
+
+        myUid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        firestore = FirebaseFirestore.getInstance();
+
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> finish());
+
         imgGroup = findViewById(R.id.imgGroup);
         tvGroupName = findViewById(R.id.tvGroupName);
         tvMembersCount = findViewById(R.id.tvMembersCount);
-
-        recyclerMembers = findViewById(R.id.recyclerMembers);
-
         btnAddMember = findViewById(R.id.btnAddMember);
-        btnAddMember.setOnClickListener(v -> {
-
-            Intent intent = new Intent(
-                    GroupInfoActivity.this,
-                    AddGroupMemberActivity.class
-            );
-
-            intent.putExtra("groupId", groupId);
-
-            startActivity(intent);
-
-        });
         btnLeaveGroup = findViewById(R.id.btnLeaveGroup);
-        btnLeaveGroup.setOnClickListener(v -> leaveGroup());
-
-        firestore = FirebaseFirestore.getInstance();
-
-        groupId = getIntent().getStringExtra("groupId");
+        RecyclerView recyclerMembers = findViewById(R.id.recyclerMembers);
 
         adapter = new GroupMemberAdapter(
                 members,
-                admins,
-                isAdmin,
-                this::removeMember,
-                this::promoteMember
+                new ArrayList<>(),
+                false,
+                this::confirmRemove,
+                this::promote,
+                this::demote
         );
 
-        recyclerMembers.setLayoutManager(
-                new LinearLayoutManager(this)
-        );
-
+        recyclerMembers.setLayoutManager(new LinearLayoutManager(this));
         recyclerMembers.setAdapter(adapter);
 
-        loadGroupInfo();
+        btnAddMember.setOnClickListener(v -> {
+            Intent intent = new Intent(this, AddGroupMemberActivity.class);
+            intent.putExtra("groupId", groupId);
+            startActivity(intent);
+        });
+
+        btnLeaveGroup.setOnClickListener(v -> confirmLeave());
+
+        listenToGroup();
     }
 
-    private void loadGroupInfo() {
+    /** Live listener: member changes (by me or another admin) show up immediately. */
+    private void listenToGroup() {
 
         firestore.collection("Groups")
                 .document(groupId)
-                .get()
-                .addOnSuccessListener(document -> {
+                .addSnapshotListener(this, (doc, error) -> {
 
-                    if (!document.exists()) return;
+                    if (doc == null) return;
 
-                    Group group = document.toObject(Group.class);
+                    if (!doc.exists()) {
+                        // deleted (last member left)
+                        finish();
+                        return;
+                    }
 
-                    if (group == null) return;
+                    Group loaded = doc.toObject(Group.class);
 
-                    String myUid = FirebaseAuth.getInstance()
-                            .getCurrentUser()
-                            .getUid();
+                    if (loaded == null) return;
 
-                    isAdmin = group.getAdmins() != null &&
-                            group.getAdmins().contains(myUid);
+                    loaded.setGroupId(doc.getId());
+                    group = loaded;
 
-                    tvGroupName.setText(group.getGroupName());
-
-                    tvMembersCount.setText(
-                            group.getMembersCount() + " Members"
-                    );
-
-                    adapter.updateAdmins(group.getAdmins(), isAdmin);
-
-                    Glide.with(this)
-                            .load(group.getGroupImage())
-                            .placeholder(R.drawable.ic_group)
-                            .error(R.drawable.ic_group)
-                            .into(imgGroup);
-
-                    loadMembers(group.getMembers());
-
+                    bindGroup();
                 });
-
     }
-    private void removeMember(User user) {
-        if (!isAdmin) {
-            Toast.makeText(
-                    this,
-                    "Only admins can perform this action",
-                    Toast.LENGTH_SHORT
-            ).show();
+
+    private void bindGroup() {
+
+        tvGroupName.setText(group.getGroupName() == null ? "Group" : group.getGroupName());
+
+        int count = group.getMembersCount();
+        tvMembersCount.setText(count + (count == 1 ? " member" : " members"));
+
+        if (group.getGroupImage() != null && !group.getGroupImage().isEmpty()) {
+            Glide.with(this)
+                    .load(group.getGroupImage())
+                    .placeholder(R.drawable.ic_group_avatar)
+                    .into(imgGroup);
+        } else {
+            imgGroup.setImageResource(R.drawable.ic_group_avatar);
+        }
+
+        admins.clear();
+
+        if (group.getAdmins() != null) {
+            admins.addAll(group.getAdmins());
+        }
+
+        isMember = group.getMembers() != null && group.getMembers().contains(myUid);
+        isAdmin = isMember && admins.contains(myUid);
+
+        // Only admins can add people; only members can leave
+        btnAddMember.setVisibility(isAdmin ? View.VISIBLE : View.GONE);
+        btnLeaveGroup.setVisibility(isMember ? View.VISIBLE : View.GONE);
+
+        adapter.setOwner(group.getCreatedBy());
+        adapter.updateAdmins(admins, isAdmin);
+
+        loadMembers();
+    }
+
+    /** Loads the member profiles in ONE batched query per 10 users, preserving a stable order. */
+    private void loadMembers() {
+
+        List<String> uids = group.getMembers() == null
+                ? new ArrayList<>() : new ArrayList<>(group.getMembers());
+
+        final int generation = ++loadGeneration;
+
+        if (uids.isEmpty()) {
+            members.clear();
+            adapter.notifyDataSetChanged();
             return;
         }
-        firestore.collection("Groups")
-                .document(groupId)
-                .get()
-                .addOnSuccessListener(document -> {
 
-                    Group group = document.toObject(Group.class);
+        List<Task<QuerySnapshot>> tasks = new ArrayList<>();
 
-                    if (group == null) return;
+        for (int i = 0; i < uids.size(); i += 10) {
 
-                    List<String> members =
-                            group.getMembers() == null
-                                    ? new ArrayList<>()
-                                    : new ArrayList<>(group.getMembers());
+            List<String> chunk = uids.subList(i, Math.min(i + 10, uids.size()));
 
-                    List<String> admins =
-                            group.getAdmins() == null
-                                    ? new ArrayList<>()
-                                    : new ArrayList<>(group.getAdmins());
-
-                    long now = System.currentTimeMillis();
-
-                    // Remove from current members/admins
-                    members.remove(user.getUid());
-                    admins.remove(user.getUid());
-
-                    // Keep at least one admin
-                    if (admins.isEmpty() && !members.isEmpty()) {
-                        admins.add(members.get(0));
-                    }
-
-                    // ==================================
-                    // Update MemberInfo
-                    // ==================================
-
-                    Map<String, GroupMemberInfo> memberInfo =
-                            group.getMemberInfo();
-
-                    if (memberInfo == null) {
-                        memberInfo = new HashMap<>();
-                    }
-
-                    GroupMemberInfo info =
-                            memberInfo.get(user.getUid());
-
-                    if (info != null) {
-                        info.setActive(false);
-                        memberInfo.put(user.getUid(), info);
-                    }
-
-                    // ==================================
-                    // Update Membership History
-                    // ==================================
-
-                    Map<String, List<MembershipPeriod>> memberHistory =
-                            group.getMemberHistory();
-
-                    if (memberHistory == null) {
-                        memberHistory = new HashMap<>();
-                    }
-
-                    List<MembershipPeriod> periods =
-                            memberHistory.get(user.getUid());
-
-                    if (periods != null && !periods.isEmpty()) {
-
-                        MembershipPeriod latest =
-                                periods.get(periods.size() - 1);
-
-                        if (latest.getLeftAt() == null) {
-                            latest.setLeftAt(now);
-                        }
-
-                        memberHistory.put(user.getUid(), periods);
-                    }
-
-                    firestore.collection("Groups")
-                            .document(groupId)
-                            .update(
-                                    "members", members,
-                                    "admins", admins,
-                                    "memberInfo", memberInfo,
-                                    "memberHistory", memberHistory,
-                                    "membersCount", members.size()
-                            )
-                            .addOnSuccessListener(unused -> {
-
-                                Toast.makeText(
-                                        this,
-                                        user.getName() + " removed",
-                                        Toast.LENGTH_SHORT
-                                ).show();
-
-                                loadGroupInfo();
-
-                            });
-
-                });
-
-    }
-    private void promoteMember(User user) {
-        if (!isAdmin) {
-            Toast.makeText(
-                    this,
-                    "Only admins can perform this action",
-                    Toast.LENGTH_SHORT
-            ).show();
-            return;
-        }
-        firestore.collection("Groups")
-                .document(groupId)
-                .get()
-                .addOnSuccessListener(document -> {
-
-                    Group group = document.toObject(Group.class);
-
-                    if (group == null) return;
-
-                    List<String> admins =
-                            group.getAdmins() == null
-                                    ? new ArrayList<>()
-                                    : new ArrayList<>(group.getAdmins());
-
-                    if (admins.contains(user.getUid())) {
-                        return;
-                    }
-
-                    if (group.getMembers() == null ||
-                            !group.getMembers().contains(user.getUid())) {
-
-                        Toast.makeText(
-                                this,
-                                "User is not a group member",
-                                Toast.LENGTH_SHORT
-                        ).show();
-
-                        return;
-                    }
-
-                    admins.add(user.getUid());
-
-                    firestore.collection("Groups")
-                            .document(groupId)
-                            .update("admins", admins)
-                            .addOnSuccessListener(unused -> {
-
-                                android.widget.Toast.makeText(
-                                        this,
-                                        user.getName() + " is now an Admin",
-                                        android.widget.Toast.LENGTH_SHORT
-                                ).show();
-
-                                loadGroupInfo();
-
-                            });
-
-                });
-
-    }
-
-    private void loadMembers(List<String> memberIds) {
-
-        members.clear();
-
-        for (String uid : memberIds) {
-
-            firestore.collection("Users")
-                    .document(uid)
-                    .get()
-                    .addOnSuccessListener(document -> {
-
-                        User user = document.toObject(User.class);
-
-                        if (user != null) {
-
-                            members.add(user);
-
-                            adapter.notifyDataSetChanged();
-
-                        }
-
-                    });
-
+            tasks.add(firestore.collection("Users")
+                    .whereIn(FieldPath.documentId(), chunk)
+                    .get());
         }
 
+        Tasks.whenAllSuccess(tasks).addOnSuccessListener(results -> {
+
+            if (isDestroyed() || generation != loadGeneration) return;
+
+            List<User> loaded = new ArrayList<>();
+
+            for (Object result : results) {
+                for (DocumentSnapshot doc : ((QuerySnapshot) result).getDocuments()) {
+
+                    User user = doc.toObject(User.class);
+
+                    if (user != null) {
+                        user.setUid(doc.getId());
+                        loaded.add(user);
+                    }
+                }
+            }
+
+            String owner = group.getCreatedBy();
+
+            // owner first, then admins, then everyone else by name
+            Collections.sort(loaded, (a, b) -> {
+
+                int rankA = a.getUid().equals(owner) ? 0 : admins.contains(a.getUid()) ? 1 : 2;
+                int rankB = b.getUid().equals(owner) ? 0 : admins.contains(b.getUid()) ? 1 : 2;
+
+                if (rankA != rankB) return Integer.compare(rankA, rankB);
+
+                String x = a.getName() == null ? "" : a.getName().toLowerCase(Locale.getDefault());
+                String y = b.getName() == null ? "" : b.getName().toLowerCase(Locale.getDefault());
+
+                return x.compareTo(y);
+            });
+
+            members.clear();
+            members.addAll(loaded);
+
+            adapter.notifyDataSetChanged();
+        });
     }
-    private void leaveGroup() {
 
-        String uid = FirebaseAuth.getInstance()
-                .getCurrentUser()
-                .getUid();
+    // ---------------------------------------------------------------------
+    // Actions
+    // ---------------------------------------------------------------------
 
-        firestore.collection("Groups")
-                .document(groupId)
-                .get()
-                .addOnSuccessListener(document -> {
+    private void confirmRemove(User user) {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Remove member?")
+                .setMessage("Remove " + (user.getName() == null ? "this user" : user.getName())
+                        + " from the group?")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Remove", (d, w) ->
+                        GroupHelper.removeMember(groupId, user.getUid(), toastCallback(
+                                "Member removed", "Couldn't remove member")))
+                .show();
+    }
 
-                    Group group = document.toObject(Group.class);
+    private void promote(User user) {
+        GroupHelper.setAdmin(groupId, user.getUid(), true,
+                toastCallback("Promoted to admin", "Couldn't promote"));
+    }
 
-                    if (group == null) return;
+    private void demote(User user) {
+        GroupHelper.setAdmin(groupId, user.getUid(), false,
+                toastCallback("Admin rights removed", "Couldn't update admin"));
+    }
 
-                    long now = System.currentTimeMillis();
+    private void confirmLeave() {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Leave group?")
+                .setMessage("You will no longer receive new messages from this group.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Leave", (d, w) ->
+                        GroupHelper.removeMember(groupId, myUid, new GroupHelper.Callback() {
 
-                    List<String> members =
-                            new ArrayList<>(group.getMembers());
+                            @Override
+                            public void onSuccess() {
+                                Toast.makeText(GroupInfoActivity.this,
+                                        "You left the group", Toast.LENGTH_SHORT).show();
 
-                    List<String> admins =
-                            new ArrayList<>(group.getAdmins());
-
-                    Map<String, GroupMemberInfo> memberInfo =
-                            group.getMemberInfo() == null
-                                    ? new HashMap<>()
-                                    : new HashMap<>(group.getMemberInfo());
-
-                    Map<String, List<MembershipPeriod>> memberHistory =
-                            group.getMemberHistory() == null
-                                    ? new HashMap<>()
-                                    : new HashMap<>(group.getMemberHistory());
-
-                    // Remove yourself
-                    members.remove(uid);
-                    admins.remove(uid);
-
-                    // ===========================
-                    // MemberInfo
-                    // ===========================
-
-                    GroupMemberInfo info = memberInfo.get(uid);
-
-                    if (info != null) {
-
-                        info.setActive(false);
-
-                        memberInfo.put(uid, info);
-
-                    }
-
-                    // ===========================
-                    // Membership History
-                    // ===========================
-
-                    List<MembershipPeriod> periods =
-                            memberHistory.get(uid);
-
-                    if (periods != null && !periods.isEmpty()) {
-
-                        MembershipPeriod latest =
-                                periods.get(periods.size() - 1);
-
-                        if (latest.getLeftAt() == null) {
-
-                            latest.setLeftAt(now);
-
-                        }
-
-                        memberHistory.put(uid, periods);
-
-                    }
-
-                    // Delete group if empty
-                    if (members.isEmpty()) {
-
-                        firestore.collection("Groups")
-                                .document(groupId)
-                                .delete()
-                                .addOnSuccessListener(unused -> {
-
-                                    Toast.makeText(
-                                            this,
-                                            "Group deleted",
-                                            Toast.LENGTH_SHORT
-                                    ).show();
-
-                                    Intent intent =
-                                            new Intent(
-                                                    this,
-                                                    GroupListActivity.class
-                                            );
-
-                                    intent.addFlags(
-                                            Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                                    | Intent.FLAG_ACTIVITY_NEW_TASK
-                                    );
-
-                                    startActivity(intent);
-                                    finish();
-
-                                });
-
-                        return;
-                    }
-
-                    // Always keep one admin
-                    if (admins.isEmpty()) {
-
-                        admins.add(members.get(0));
-
-                    }
-
-                    // Transfer ownership
-                    String createdBy = group.getCreatedBy();
-
-                    if (createdBy != null &&
-                            createdBy.equals(uid)) {
-
-                        createdBy = admins.get(0);
-
-                    }
-
-                    firestore.collection("Groups")
-                            .document(groupId)
-                            .update(
-                                    "members", members,
-                                    "admins", admins,
-                                    "memberInfo", memberInfo,
-                                    "memberHistory", memberHistory,
-                                    "createdBy", createdBy,
-                                    "membersCount", members.size()
-                            )
-                            .addOnSuccessListener(unused -> {
-
-                                Toast.makeText(
-                                        this,
-                                        "You left the group",
-                                        Toast.LENGTH_SHORT
-                                ).show();
-
-                                Intent intent =
-                                        new Intent(
-                                                this,
-                                                GroupListActivity.class
-                                        );
-
-                                intent.addFlags(
-                                        Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                                | Intent.FLAG_ACTIVITY_NEW_TASK
-                                );
-
+                                // back to the list (skip the chat that is still open)
+                                Intent intent = new Intent(GroupInfoActivity.this,
+                                        GroupListActivity.class);
+                                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                                 startActivity(intent);
                                 finish();
+                            }
 
-                            });
-
-                });
-
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                Toast.makeText(GroupInfoActivity.this,
+                                        "Couldn't leave group", Toast.LENGTH_SHORT).show();
+                            }
+                        }))
+                .show();
     }
 
+    private GroupHelper.Callback toastCallback(String ok, String fail) {
+        return new GroupHelper.Callback() {
+            @Override
+            public void onSuccess() {
+                Toast.makeText(GroupInfoActivity.this, ok, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                Toast.makeText(GroupInfoActivity.this,
+                        e.getMessage() != null && e.getMessage().contains("at least one admin")
+                                ? e.getMessage() : fail,
+                        Toast.LENGTH_SHORT).show();
+            }
+        };
+    }
 }

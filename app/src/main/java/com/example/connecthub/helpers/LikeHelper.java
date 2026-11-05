@@ -1,93 +1,139 @@
 package com.example.connecthub.helpers;
 
+import androidx.annotation.NonNull;
+
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
 
 import java.util.HashMap;
+import java.util.Map;
 
 public class LikeHelper {
+
+    private LikeHelper() {
+    }
 
     public interface LikeStatusCallback {
         void onResult(boolean liked);
     }
 
-    public static void isLiked(
-            String postId,
-            LikeStatusCallback callback) {
+    public interface ToggleCallback {
+        /** @param liked the NEW state after the toggle */
+        void onSuccess(boolean liked, long newCount);
 
-        String uid = FirebaseAuth.getInstance()
-                .getCurrentUser()
-                .getUid();
+        void onFailure(@NonNull Exception e);
+    }
+
+    public static void isLiked(String postId, LikeStatusCallback callback) {
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+
+        if (user == null || postId == null) {
+            return;
+        }
 
         FirebaseFirestore.getInstance()
                 .collection("Posts")
                 .document(postId)
                 .collection("Likes")
-                .document(uid)
+                .document(user.getUid())
                 .get()
-                .addOnSuccessListener(documentSnapshot -> {
-
-                    callback.onResult(documentSnapshot.exists());
-
+                .addOnSuccessListener(snapshot -> {
+                    if (callback != null) {
+                        callback.onResult(snapshot.exists());
+                    }
                 });
-
     }
 
-    public static void toggleLike(String postId) {
+    /**
+     * Toggles the like atomically.
+     *
+     * The like document and the counter are changed in ONE transaction, so rapid taps
+     * (or two devices) can no longer leave the counter out of sync with the Likes
+     * sub-collection, which the old implementation did.
+     */
+    public static void toggleLike(
+            String postId,
+            String postOwnerId,
+            ToggleCallback callback
+    ) {
 
-        FirebaseFirestore firestore =
-                FirebaseFirestore.getInstance();
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
 
-        String uid = FirebaseAuth.getInstance()
-                .getCurrentUser()
-                .getUid();
+        if (user == null || postId == null) {
+            return;
+        }
 
-        firestore.collection("Posts")
-                .document(postId)
-                .collection("Likes")
-                .document(uid)
-                .get()
-                .addOnSuccessListener(documentSnapshot -> {
+        String uid = user.getUid();
 
-                    if (documentSnapshot.exists()) {
+        FirebaseFirestore firestore = FirebaseFirestore.getInstance();
 
-                        // Unlike
+        DocumentReference postRef = firestore.collection("Posts").document(postId);
+        DocumentReference likeRef = postRef.collection("Likes").document(uid);
 
-                        firestore.collection("Posts")
-                                .document(postId)
-                                .collection("Likes")
-                                .document(uid)
-                                .delete();
+        final long[] resultCount = new long[1];
 
-                        firestore.collection("Posts")
-                                .document(postId)
-                                .update(
-                                        "likesCount",
-                                        FieldValue.increment(-1)
-                                );
+        firestore.runTransaction(transaction -> {
+
+                    DocumentSnapshot postSnapshot = transaction.get(postRef);
+                    DocumentSnapshot likeSnapshot = transaction.get(likeRef);
+
+                    if (!postSnapshot.exists()) {
+                        throw new FirebaseFirestoreException(
+                                "This post no longer exists",
+                                FirebaseFirestoreException.Code.NOT_FOUND
+                        );
+                    }
+
+                    Long stored = postSnapshot.getLong("likesCount");
+                    long current = stored == null ? 0 : stored;
+
+                    boolean nowLiked;
+
+                    if (likeSnapshot.exists()) {
+
+                        transaction.delete(likeRef);
+                        current = Math.max(0, current - 1);
+                        nowLiked = false;
 
                     } else {
 
-                        // Like
+                        Map<String, Object> like = new HashMap<>();
+                        like.put("timestamp", System.currentTimeMillis());
 
-                        firestore.collection("Posts")
-                                .document(postId)
-                                .collection("Likes")
-                                .document(uid)
-                                .set(new HashMap<>());
-
-                        firestore.collection("Posts")
-                                .document(postId)
-                                .update(
-                                        "likesCount",
-                                        FieldValue.increment(1)
-                                );
-
+                        transaction.set(likeRef, like);
+                        current = current + 1;
+                        nowLiked = true;
                     }
 
+                    transaction.update(postRef, "likesCount", current);
+
+                    resultCount[0] = current;
+
+                    return nowLiked;
+                })
+                .addOnSuccessListener(liked -> {
+
+                    if (liked) {
+                        NotificationHelper.sendNotification(
+                                uid, postOwnerId, "like", postId, "liked your post");
+                    } else {
+                        NotificationHelper.removeNotification(
+                                uid, postOwnerId, "like", postId);
+                    }
+
+                    if (callback != null) {
+                        callback.onSuccess(liked, resultCount[0]);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (callback != null) {
+                        callback.onFailure(e);
+                    }
                 });
-
     }
-
 }

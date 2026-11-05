@@ -51,14 +51,15 @@ dependencies {
     // Firestore
     implementation("com.google.firebase:firebase-firestore")
 
-    // Firebase Storage
-    implementation("com.google.firebase:firebase-storage")
+
+    // Firebase Cloud Messaging (version managed by the BOM)
+    implementation("com.google.firebase:firebase-messaging")
+
+    // Image loading
     implementation("com.github.bumptech.glide:glide:4.16.0")
-    implementation("com.google.android.material:material:1.12.0")
-    implementation("com.google.firebase:firebase-messaging:24.1.0")
-    implementation("androidx.activity:activity:1.9.0")
+
+    // Voice message waveform
     implementation("com.github.massoudss:waveformSeekBar:5.0.2")
-    implementation("com.google.firebase:firebase-messaging:24.1.0")
 
 
     testImplementation(libs.junit)

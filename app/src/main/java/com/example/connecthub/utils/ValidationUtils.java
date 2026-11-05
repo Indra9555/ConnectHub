@@ -1,20 +1,26 @@
 package com.example.connecthub.utils;
 
-import android.text.TextUtils;
 import android.util.Patterns;
 
 public class ValidationUtils {
 
+    private ValidationUtils() {
+    }
+
     public static boolean isEmpty(String text) {
-        return TextUtils.isEmpty(text.trim());
+        return text == null || text.trim().isEmpty();
     }
 
     public static boolean isValidEmail(String email) {
-        return Patterns.EMAIL_ADDRESS.matcher(email).matches();
+        return email != null && Patterns.EMAIL_ADDRESS.matcher(email).matches();
     }
 
     public static boolean isPasswordValid(String password) {
-        return password.length() >= 6;
+        return password != null && password.length() >= 6;
     }
 
+    /** Usernames: 3-20 chars, letters / digits / underscore / dot. */
+    public static boolean isValidUsername(String username) {
+        return username != null && username.matches("[A-Za-z0-9_.]{3,20}");
+    }
 }

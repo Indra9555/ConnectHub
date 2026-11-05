@@ -4,11 +4,13 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.connecthub.R;
 import com.example.connecthub.models.User;
 
@@ -48,8 +50,22 @@ public class SelectMembersAdapter
 
         User user = userList.get(position);
 
-        holder.tvName.setText(user.getName());
-        holder.tvUsername.setText("@" + user.getUsername());
+        holder.tvName.setText(user.getName() == null ? "" : user.getName());
+        holder.tvUsername.setText(user.getUsername() == null ? "" : "@" + user.getUsername());
+
+        if (user.getImage() != null && !user.getImage().isEmpty()) {
+            Glide.with(holder.itemView.getContext())
+                    .load(user.getImage())
+                    .placeholder(R.drawable.ic_person)
+                    .error(R.drawable.ic_person)
+                    .into(holder.imgUser);
+        } else {
+            Glide.with(holder.itemView.getContext()).clear(holder.imgUser);
+            holder.imgUser.setImageResource(R.drawable.ic_person);
+        }
+
+        // tapping the whole row toggles the checkbox
+        holder.itemView.setOnClickListener(v -> holder.checkBox.toggle());
 
         holder.checkBox.setOnCheckedChangeListener(null);
 
@@ -83,6 +99,7 @@ public class SelectMembersAdapter
 
         TextView tvName, tvUsername;
         CheckBox checkBox;
+        ImageView imgUser;
 
         ViewHolder(View itemView) {
             super(itemView);
@@ -90,6 +107,7 @@ public class SelectMembersAdapter
             tvName = itemView.findViewById(R.id.tvName);
             tvUsername = itemView.findViewById(R.id.tvUsername);
             checkBox = itemView.findViewById(R.id.checkbox);
+            imgUser = itemView.findViewById(R.id.imgUser);
         }
     }
 }

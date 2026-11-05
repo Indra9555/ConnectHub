@@ -52,8 +52,8 @@ public class AddMemberAdapter
 
         User user = users.get(position);
 
-        holder.tvName.setText(user.getName());
-        holder.tvUsername.setText("@" + user.getUsername());
+        holder.tvName.setText(user.getName() == null ? "" : user.getName());
+        holder.tvUsername.setText(user.getUsername() == null ? "" : "@" + user.getUsername());
 
         Glide.with(holder.itemView.getContext())
                 .load(user.getImage())

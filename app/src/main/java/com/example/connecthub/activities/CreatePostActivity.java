@@ -1,41 +1,38 @@
 package com.example.connecthub.activities;
 
-import android.os.Bundle;
-import android.widget.ImageView;
-
-import androidx.appcompat.app.AppCompatActivity;
-import com.example.connecthub.network.CloudinaryUploader;
-
-import com.bumptech.glide.Glide;
-import com.example.connecthub.R;
-import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.button.MaterialButton;
-import com.google.android.material.textfield.TextInputEditText;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.FirebaseFirestore;
-import android.content.Intent;
 import android.net.Uri;
+import android.os.Bundle;
 import android.view.View;
-import com.example.connecthub.models.Post;
-
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class CreatePostActivity extends AppCompatActivity {
-    private ImageView imgPostPreview;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 
+import com.bumptech.glide.Glide;
+import com.example.connecthub.R;
+import com.example.connecthub.models.Post;
+import com.example.connecthub.network.CloudinaryUploader;
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.imageview.ShapeableImageView;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+public class CreatePostActivity extends BaseActivity {
+
+    private ShapeableImageView imgPostPreview;
+    private ShapeableImageView imgUser;
+    private View layoutPreview;
     private MaterialButton btnSelectImage;
-
-    private Uri postImageUri;
-
-    private MaterialToolbar toolbar;
-
-    private ImageView imgUser;
+    private MaterialButton btnPost;
     private TextView tvUsername;
-
     private TextInputEditText etPost;
 
-    private MaterialButton btnPost;
+    private Uri postImageUri;
 
     private FirebaseAuth auth;
     private FirebaseFirestore firestore;
@@ -43,263 +40,175 @@ public class CreatePostActivity extends AppCompatActivity {
     private String name;
     private String username;
     private String imageUrl;
+    private boolean profileLoaded = false;
+
+    private final ActivityResultLauncher<String> imagePicker =
+            registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+                if (uri != null) {
+                    postImageUri = uri;
+                    layoutPreview.setVisibility(View.VISIBLE);
+                    imgPostPreview.setImageURI(uri);
+                    btnSelectImage.setText("Change photo");
+                }
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_post);
 
-        initializeViews();
-
-        initializeFirebase();
-
-        loadCurrentUser();
-
-        toolbar.setNavigationOnClickListener(v -> finish());
-
-        btnPost.setOnClickListener(v -> createPost());
-        btnSelectImage.setOnClickListener(v -> {
-
-            Intent intent =
-                    new Intent(Intent.ACTION_PICK);
-
-            intent.setType("image/*");
-
-            startActivityForResult(
-                    intent,
-                    200
-            );
-
-        });
-    }
-
-    private void initializeViews() {
-
-        imgPostPreview =
-                findViewById(R.id.imgPostPreview);
-
-
-        btnSelectImage =
-                findViewById(R.id.btnSelectImage);
-
-        toolbar = findViewById(R.id.toolbar);
-
-        imgUser = findViewById(R.id.imgUser);
-
-        tvUsername = findViewById(R.id.tvUsername);
-
-        etPost = findViewById(R.id.etPost);
-
-        btnPost = findViewById(R.id.btnPost);
-
-    }
-
-    private void initializeFirebase() {
-
         auth = FirebaseAuth.getInstance();
-
         firestore = FirebaseFirestore.getInstance();
 
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> finish());
+
+        imgPostPreview = findViewById(R.id.imgPostPreview);
+        imgUser = findViewById(R.id.imgUser);
+        layoutPreview = findViewById(R.id.layoutPreview);
+        btnSelectImage = findViewById(R.id.btnSelectImage);
+        btnPost = findViewById(R.id.btnPost);
+        tvUsername = findViewById(R.id.tvUsername);
+        etPost = findViewById(R.id.etPost);
+        ImageButton btnRemoveImage = findViewById(R.id.btnRemoveImage);
+
+        btnSelectImage.setOnClickListener(v -> imagePicker.launch("image/*"));
+
+        btnRemoveImage.setOnClickListener(v -> {
+            postImageUri = null;
+            layoutPreview.setVisibility(View.GONE);
+            btnSelectImage.setText("Add photo");
+        });
+
+        btnPost.setOnClickListener(v -> createPost());
+
+        loadCurrentUser();
     }
 
     private void loadCurrentUser() {
 
-        String uid = auth.getCurrentUser().getUid();
+        FirebaseUser user = auth.getCurrentUser();
+
+        if (user == null) {
+            finish();
+            return;
+        }
 
         firestore.collection("Users")
-                .document(uid)
+                .document(user.getUid())
                 .get()
                 .addOnSuccessListener(document -> {
+
+                    if (isDestroyed()) return;
 
                     name = document.getString("name");
                     username = document.getString("username");
                     imageUrl = document.getString("image");
 
-                    tvUsername.setText(name);
+                    profileLoaded = true;
+
+                    tvUsername.setText(name == null ? "" : name);
 
                     if (imageUrl != null && !imageUrl.isEmpty()) {
-
                         Glide.with(this)
                                 .load(imageUrl)
                                 .placeholder(R.drawable.ic_person)
                                 .into(imgUser);
-
-                    } else {
-
-                        imgUser.setImageResource(R.drawable.ic_person);
-
                     }
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Couldn't load your profile", Toast.LENGTH_SHORT).show());
+    }
 
-                });
-
+    private void setPosting(boolean posting) {
+        btnPost.setEnabled(!posting);
+        btnSelectImage.setEnabled(!posting);
+        btnPost.setText(posting ? "Posting..." : "Post");
     }
 
     private void createPost() {
 
-        String content = etPost.getText().toString().trim();
+        String content = etPost.getText() == null ? "" : etPost.getText().toString().trim();
 
-        if (content.isEmpty()) {
-
-            etPost.setError("Write something...");
+        // A post needs text OR a photo (photo-only posts were impossible before)
+        if (content.isEmpty() && postImageUri == null) {
+            etPost.setError("Write something or add a photo");
             etPost.requestFocus();
             return;
-
         }
 
-        btnPost.setEnabled(false);
-        btnPost.setText("Posting...");
+        if (!profileLoaded) {
+            Toast.makeText(this, "Loading your profile, try again in a moment",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        String uid = auth.getCurrentUser().getUid();
+        FirebaseUser user = auth.getCurrentUser();
 
-        String postId = firestore.collection("Posts")
-                .document()
-                .getId();
+        if (user == null) {
+            finish();
+            return;
+        }
 
-        savePost(
-                postId,
-                uid,
-                content
-        );
+        setPosting(true);
 
+        String uid = user.getUid();
+        String postId = firestore.collection("Posts").document().getId();
 
+        if (postImageUri == null) {
+            createPostInFirestore(postId, uid, content, "");
+            return;
+        }
 
+        CloudinaryUploader.uploadImage(this, postImageUri, new CloudinaryUploader.UploadCallback() {
+
+            @Override
+            public void onSuccess(String url) {
+                createPostInFirestore(postId, uid, content, url);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                setPosting(false);
+                Toast.makeText(CreatePostActivity.this,
+                        e.getMessage() == null ? "Image upload failed" : e.getMessage(),
+                        Toast.LENGTH_LONG).show();
+            }
+        });
     }
-    @Override
-    protected void onActivityResult(
-            int requestCode,
-            int resultCode,
-            Intent data) {
 
-        super.onActivityResult(
-                requestCode,
-                resultCode,
-                data
-        );
-
-
-        if(requestCode == 200 &&
-                resultCode == RESULT_OK &&
-                data != null){
-
-
-            postImageUri =
-                    data.getData();
-
-
-            imgPostPreview.setVisibility(View.VISIBLE);
-
-
-            imgPostPreview.setImageURI(
-                    postImageUri
-            );
-
-        }
-
-    }
-    private void savePost(
-            String postId,
-            String uid,
-            String content
-    ) {
-
-
-        if(postImageUri != null){
-
-
-            CloudinaryUploader.uploadImage(
-                    this,
-                    postImageUri,
-                    new CloudinaryUploader.UploadCallback() {
-
-
-                        @Override
-                        public void onSuccess(String imageUrl) {
-
-
-                            createPostInFirestore(
-                                    postId,
-                                    uid,
-                                    content,
-                                    imageUrl
-                            );
-
-
-                        }
-
-
-                        @Override
-                        public void onFailure(Exception e) {
-
-
-                            runOnUiThread(() -> {
-
-                                btnPost.setEnabled(true);
-
-                                Toast.makeText(
-                                        CreatePostActivity.this,
-                                        e.getMessage(),
-                                        Toast.LENGTH_LONG
-                                ).show();
-
-                            });
-
-
-                        }
-
-                    });
-
-
-        }
-        else{
-
-
-            createPostInFirestore(
-                    postId,
-                    uid,
-                    content,
-                    ""
-            );
-
-
-        }
-
-    }
     private void createPostInFirestore(
             String postId,
             String uid,
             String content,
             String postImage
-    ){
+    ) {
 
-        Post post =
-                new Post(
-                        postId,
-                        uid,
-                        name,
-                        username,
-                        imageUrl == null ? "" : imageUrl,
-                        content,
-                        postImage,
-                        System.currentTimeMillis(),
-                        0,
-                        0
-                );
-
+        Post post = new Post(
+                postId,
+                uid,
+                name == null ? "" : name,
+                username == null ? "" : username,
+                imageUrl == null ? "" : imageUrl,
+                content,
+                postImage,
+                System.currentTimeMillis(),
+                0,
+                0
+        );
 
         firestore.collection("Posts")
                 .document(postId)
                 .set(post)
                 .addOnSuccessListener(unused -> {
-
-
-                    btnPost.setEnabled(true);
-                    btnPost.setText("POST");
-
+                    Toast.makeText(this, "Posted!", Toast.LENGTH_SHORT).show();
                     finish();
-
-
+                })
+                .addOnFailureListener(e -> {
+                    setPosting(false);
+                    Toast.makeText(this,
+                            e.getMessage() == null ? "Couldn't publish post" : e.getMessage(),
+                            Toast.LENGTH_LONG).show();
                 });
-
-
     }
 }

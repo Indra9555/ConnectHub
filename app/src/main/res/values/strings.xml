@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">ConnectHub</string>
+    <string name="notification_channel_messages">Messages</string>
+    <string name="notification_channel_messages_desc">New chat and group messages</string>
 </resources>

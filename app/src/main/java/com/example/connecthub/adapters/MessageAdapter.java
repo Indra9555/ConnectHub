@@ -56,9 +56,12 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     }
     @Override
     public long getItemId(int position) {
-        return messageList.get(position)
-                .getMessageId()
-                .hashCode();
+        String id = messageList.get(position).getMessageId();
+
+        // Stable ids must be unique: fall back to the timestamp for messages without an id
+        return id == null || id.isEmpty()
+                ? messageList.get(position).getTimestamp()
+                : id.hashCode();
     }
     public void setGroupChat(boolean groupChat) {
         this.isGroupChat = groupChat;
@@ -96,9 +99,14 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     @Override
     public int getItemViewType(int position) {
 
-        String currentUid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        FirebaseAuth auth = FirebaseAuth.getInstance();
 
-        if (messageList.get(position).getSenderId().equals(currentUid)) {
+        String currentUid = auth.getCurrentUser() == null
+                ? "" : auth.getCurrentUser().getUid();
+
+        String senderId = messageList.get(position).getSenderId();
+
+        if (senderId != null && senderId.equals(currentUid)) {
             return SENT;
         }
 
@@ -242,6 +250,16 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 bindTextMessage(receivedHolder.tvMessage, message, false);
             }
 
+            // In group chats show who wrote the message
+            if (isGroupChat
+                    && message.getSenderName() != null
+                    && !message.getSenderName().isEmpty()) {
+                receivedHolder.tvSenderName.setVisibility(View.VISIBLE);
+                receivedHolder.tvSenderName.setText(message.getSenderName());
+            } else {
+                receivedHolder.tvSenderName.setVisibility(View.GONE);
+            }
+
             bindReaction(receivedHolder.tvReaction, message);
 
             receivedHolder.layoutBubble.setOnLongClickListener(v -> {
@@ -298,7 +316,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
         layoutReplyPreview.setVisibility(View.VISIBLE);
 
-        tvReplySender.setText(message.getReplySender());
+        tvReplySender.setText(message.getReplySender() == null ? "" : message.getReplySender());
 
         Message replied = messageMap.get(message.getReplyMessageId());
 
@@ -329,6 +347,11 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
             tvReplyMessage.setText("Photo");
 
+        } else if ("voice".equals(replied.getType())) {
+
+            imgReply.setVisibility(View.GONE);
+            tvReplyMessage.setText("🎤 Voice message");
+
         } else {
 
             imgReply.setVisibility(View.GONE);
@@ -348,24 +371,27 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
         tvMessage.setVisibility(View.VISIBLE);
 
+        android.content.Context context = tvMessage.getContext();
+
         if (message.isDeleted()) {
 
-            if (isSender) {
-                tvMessage.setText("🚫 You deleted this message");
+            tvMessage.setText(isSender
+                    ? "🚫 You deleted this message"
+                    : "🚫 This message was deleted");
 
-                tvMessage.setTextColor(0xFF000000);
-            } else {
-                tvMessage.setText("🚫 This message was deleted");
-
-                tvMessage.setTextColor(0xFF000000);
-            }
+            tvMessage.setTextColor(androidx.core.content.ContextCompat.getColor(
+                    context, R.color.bubble_meta));
+            tvMessage.setTypeface(null, android.graphics.Typeface.ITALIC);
 
         } else {
 
             tvMessage.setText(message.getMessage());
 
+            // Reset the colour/style: recycled views used to keep the "deleted" look
+            tvMessage.setTextColor(androidx.core.content.ContextCompat.getColor(
+                    context, R.color.bubble_text));
+            tvMessage.setTypeface(null, android.graphics.Typeface.NORMAL);
         }
-
     }
     private void bindImageMessage(
             ImageView imgMessage,
@@ -392,6 +418,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
             Glide.with(itemView.getContext())
                     .load(message.getImageUrl())
+                    .centerCrop()
                     .into(imgMessage);
 
         }
@@ -424,6 +451,13 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         }
 
         String currentUid = firebaseAuth.getCurrentUser().getUid();
+
+        // Not yet confirmed by the server (e.g. sent while offline)
+        if (message.isPending()) {
+            tvSeen.setText("🕓");
+            tvSeen.setTextColor(0xFF888888);
+            return;
+        }
 
         /*
          * ==========================================
@@ -611,14 +645,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     }
 
     private void bindTime(TextView tvTime, Message message) {
-
-        String time = new SimpleDateFormat(
-                "hh:mm a",
-                Locale.getDefault()
-        ).format(new Date(message.getTimestamp()));
-
-        tvTime.setText(time);
-
+        tvTime.setText(com.example.connecthub.helpers.TimeUtils.formatClock(message.getTimestamp()));
     }
 
     static class SentViewHolder extends RecyclerView.ViewHolder {
@@ -665,6 +692,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
     static class ReceivedViewHolder extends RecyclerView.ViewHolder {
 
+        TextView tvSenderName;
         ImageView imgMessage;
 
         TextView tvMessage;
@@ -684,6 +712,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         LinearLayout layoutBubble;
         public ReceivedViewHolder(@NonNull View itemView) {
             super(itemView);
+            tvSenderName = itemView.findViewById(R.id.tvSenderName);
             tvMessage = itemView.findViewById(R.id.tvMessage);
             tvTime = itemView.findViewById(R.id.tvTime);
             imgMessage = itemView.findViewById(R.id.imgMessage);
@@ -886,6 +915,11 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    /** Call from Activity.onDestroy / onStop so audio doesn't keep playing or leak. */
+    public void release() {
+        stopCurrentPlayback();
     }
 
     private void stopCurrentPlayback() {

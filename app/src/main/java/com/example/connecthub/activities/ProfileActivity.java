@@ -1,629 +1,350 @@
 package com.example.connecthub.activities;
 
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
-import com.example.connecthub.adapters.PostAdapter;
-import com.example.connecthub.models.Post;
-
-import java.util.ArrayList;
-import java.util.List;
-import com.example.connecthub.helpers.FollowHelper;
-
-import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.connecthub.R;
+import com.example.connecthub.adapters.PostAdapter;
+import com.example.connecthub.helpers.FollowHelper;
+import com.example.connecthub.helpers.PostHelper;
+import com.example.connecthub.models.Post;
 import com.example.connecthub.network.CloudinaryUploader;
-
+import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
-
-public class ProfileActivity extends AppCompatActivity {
-
+public class ProfileActivity extends BaseActivity {
 
     private ShapeableImageView imgProfile;
-
-    private String profileUid;
 
     private TextView tvName;
     private TextView tvUsername;
     private TextView tvBio;
     private TextView tvEmail;
+    private TextView tvPostCount;
+    private TextView tvFollowers;
+    private TextView tvFollowing;
+    private TextView tvNoPosts;
+    private TextView tvPostsTitle;
 
-
-    private Button btnEditProfile;
+    private MaterialButton btnEditProfile;
     private MaterialButton btnFollow;
-    private Button btnUploadImage;
-
+    private MaterialButton btnMessage;
+    private MaterialButton btnUploadImage;
 
     private ProgressBar progressBar;
-
 
     private FirebaseAuth auth;
     private FirebaseFirestore firestore;
 
+    private String profileUid;
+    private String myUid;
+    private boolean isMe;
+    private boolean following;
+    private boolean followBusy;
 
-    private Uri imageUri;
-    private RecyclerView recyclerMyPosts;
+    private String currentName;
+    private String currentUsername;
 
     private PostAdapter postAdapter;
+    private final List<Post> myPosts = new ArrayList<>();
 
-    private List<Post> myPosts;
-    private TextView tvPostCount;
-    private TextView tvFollowers;
-    private TextView tvFollowing;
-
-
-
-    @SuppressLint("MissingInflatedId")
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-
-        super.onCreate(savedInstanceState);
-
-        setContentView(R.layout.activity_profile);
-        btnFollow = findViewById(R.id.btnFollow);
-
-
-
-        imgProfile = findViewById(R.id.imgProfile);
-
-        tvName = findViewById(R.id.tvName);
-
-        tvUsername = findViewById(R.id.tvUsername);
-
-        tvBio = findViewById(R.id.tvBio);
-
-        tvEmail = findViewById(R.id.tvEmail);
-
-
-        btnEditProfile = findViewById(R.id.btnEditProfile);
-
-        btnUploadImage = findViewById(R.id.btnUploadImage);
-
-
-        progressBar = findViewById(R.id.progressBar);
-        recyclerMyPosts =
-                findViewById(R.id.recyclerMyPosts);
-
-
-        tvPostCount =
-                findViewById(R.id.tvPostCount);
-
-
-        tvFollowers =
-                findViewById(R.id.tvFollowers);
-
-
-        tvFollowing =
-                findViewById(R.id.tvFollowing);
-
-
-
-
-
-        auth = FirebaseAuth.getInstance();
-
-        firestore = FirebaseFirestore.getInstance();
-        profileUid = getIntent().getStringExtra("uid");
-        if (profileUid == null) {
-
-            profileUid = auth.getCurrentUser().getUid();
-
-        }
-        if (profileUid.equals(auth.getCurrentUser().getUid())) {
-
-            btnFollow.setVisibility(View.GONE);
-
-            btnEditProfile.setVisibility(View.VISIBLE);
-
-            btnUploadImage.setVisibility(View.VISIBLE);
-
-        } else {
-
-            btnFollow.setVisibility(View.VISIBLE);
-
-            btnEditProfile.setVisibility(View.GONE);
-
-            btnUploadImage.setVisibility(View.GONE);
-
-        }
-        if (!profileUid.equals(auth.getCurrentUser().getUid())) {
-
-            FollowHelper.isFollowing(profileUid, following -> {
-
-                runOnUiThread(() -> {
-
-                    if (following) {
-
-                        btnFollow.setText("Following");
-
-                    } else {
-
-                        btnFollow.setText("Follow");
-
-                    }
-
-                });
-
+    private final ActivityResultLauncher<String> imagePicker =
+            registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+                if (uri != null) {
+                    // Show the chosen photo immediately and upload it right away
+                    imgProfile.setImageURI(uri);
+                    uploadProfileImage(uri);
+                }
             });
 
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_profile);
+
+        auth = FirebaseAuth.getInstance();
+        firestore = FirebaseFirestore.getInstance();
+
+        FirebaseUser me = auth.getCurrentUser();
+
+        if (me == null) {
+            finish();
+            return;
         }
 
+        myUid = me.getUid();
 
+        profileUid = getIntent().getStringExtra("uid");
 
+        if (profileUid == null || profileUid.isEmpty()) {
+            profileUid = myUid;
+        }
 
+        isMe = profileUid.equals(myUid);
 
-        myPosts = new ArrayList<>();
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> finish());
+        toolbar.setTitle(isMe ? "My profile" : "Profile");
+
+        imgProfile = findViewById(R.id.imgProfile);
+        tvName = findViewById(R.id.tvName);
+        tvUsername = findViewById(R.id.tvUsername);
+        tvBio = findViewById(R.id.tvBio);
+        tvEmail = findViewById(R.id.tvEmail);
+        tvPostCount = findViewById(R.id.tvPostCount);
+        tvFollowers = findViewById(R.id.tvFollowers);
+        tvFollowing = findViewById(R.id.tvFollowing);
+        tvNoPosts = findViewById(R.id.tvNoPosts);
+        tvPostsTitle = findViewById(R.id.tvPostsTitle);
+
+        btnEditProfile = findViewById(R.id.btnEditProfile);
+        btnFollow = findViewById(R.id.btnFollow);
+        btnMessage = findViewById(R.id.btnMessage);
+        btnUploadImage = findViewById(R.id.btnUploadImage);
+        progressBar = findViewById(R.id.progressBar);
+
+        RecyclerView recyclerMyPosts = findViewById(R.id.recyclerMyPosts);
 
         postAdapter = new PostAdapter(myPosts);
-
-        recyclerMyPosts.setLayoutManager(
-                new LinearLayoutManager(this)
-        );
-
+        recyclerMyPosts.setLayoutManager(new LinearLayoutManager(this));
         recyclerMyPosts.setAdapter(postAdapter);
 
-        loadUserProfile();
-        loadMyPosts();
-        loadFollowCounts();
+        tvPostsTitle.setText(isMe ? "My posts" : "Posts");
 
+        btnEditProfile.setVisibility(isMe ? View.VISIBLE : View.GONE);
+        btnUploadImage.setVisibility(isMe ? View.VISIBLE : View.GONE);
+        btnFollow.setVisibility(isMe ? View.GONE : View.VISIBLE);
+        btnMessage.setVisibility(isMe ? View.GONE : View.VISIBLE);
 
+        if (isMe) {
+            imgProfile.setOnClickListener(v -> imagePicker.launch("image/*"));
+        }
 
+        btnUploadImage.setOnClickListener(v -> imagePicker.launch("image/*"));
 
+        btnEditProfile.setOnClickListener(v ->
+                startActivity(new Intent(this, EditProfileActivity.class)));
 
+        btnFollow.setOnClickListener(v -> toggleFollow());
 
-        imgProfile.setOnClickListener(v -> {
-            if (profileUid.equals(auth.getCurrentUser().getUid())) {
-                openGallery();
-            }
-        });
-        btnFollow.setOnClickListener(v -> {
-
-            FollowHelper.toggleFollow(profileUid);
-
-            btnFollow.postDelayed(() -> {
-
-                FollowHelper.isFollowing(profileUid, following -> {
-
-                    runOnUiThread(() -> {
-
-                        if (following) {
-                            btnFollow.setText("Following");
-                        } else {
-                            btnFollow.setText("Follow");
-                        }
-
-                        loadFollowCounts();
-
-                    });
-
-                });
-
-            }, 500);
-
-        });
-
-
-
-        btnUploadImage.setOnClickListener(v -> {
-
-
-            if(imageUri != null){
-
-
-                uploadImageToCloudinary();
-
-
-            }
-            else{
-
-
-                Toast.makeText(
-                        this,
-                        "Select image first",
-                        Toast.LENGTH_SHORT
-                ).show();
-
-
-            }
-
-
-        });
-
-
-
-        btnEditProfile.setOnClickListener(v -> {
-
-
-            Intent intent = new Intent(
-                    ProfileActivity.this,
-                    EditProfileActivity.class
-            );
-
-
+        btnMessage.setOnClickListener(v -> {
+            Intent intent = new Intent(this, ChatActivity.class);
+            intent.putExtra("uid", profileUid);
             startActivity(intent);
-
-
         });
 
-
-    }
-
-
-
-
-
-    private void loadUserProfile() {
-
-
-        if(auth.getCurrentUser() == null){
-
-            return;
-
+        if (!isMe) {
+            FollowHelper.isFollowing(profileUid, isFollowing -> {
+                following = isFollowing;
+                renderFollowButton();
+            });
         }
 
-
-        progressBar.setVisibility(View.VISIBLE);
-
-
-
-        firestore.collection("Users")
-                .document(profileUid)
-                .get()
-                .addOnSuccessListener(documentSnapshot -> {
-
-
-
-                    if(documentSnapshot.exists()){
-
-
-                        tvName.setText(documentSnapshot.getString("name") != null
-                                ? documentSnapshot.getString("name")
-                                : "");
-
-                        tvUsername.setText("@" + (
-                                documentSnapshot.getString("username") != null
-                                        ? documentSnapshot.getString("username")
-                                        : ""));
-
-                        tvBio.setText(documentSnapshot.getString("bio") != null
-                                ? documentSnapshot.getString("bio")
-                                : "");
-
-                        tvEmail.setText(documentSnapshot.getString("email") != null
-                                ? documentSnapshot.getString("email")
-                                : "");
-
-
-
-                        // Load Profile Image
-
-                        String imageUrl =
-                                documentSnapshot.getString("image");
-
-
-
-                        if(imageUrl != null && !imageUrl.isEmpty()){
-
-
-                            Glide.with(ProfileActivity.this)
-                                    .load(imageUrl)
-                                    .placeholder(R.drawable.ic_person)
-                                    .error(R.drawable.ic_person)
-                                    .into(imgProfile);
-
-
-                        }
-                        else{
-
-
-                            imgProfile.setImageResource(R.drawable.ic_person);
-
-
-                        }
-
-
-
-                    }
-
-
-
-                    progressBar.setVisibility(View.GONE);
-
-
-
-                })
-                .addOnFailureListener(e -> {
-
-
-                    progressBar.setVisibility(View.GONE);
-
-
-                    Toast.makeText(
-                            this,
-                            e.getMessage(),
-                            Toast.LENGTH_LONG
-                    ).show();
-
-
-                });
-
-
+        renderFollowButton();
     }
-
-
-
-
-
-    private void openGallery(){
-
-
-        Intent intent =
-                new Intent(Intent.ACTION_PICK);
-
-
-        intent.setType("image/*");
-
-
-        startActivityForResult(
-                intent,
-                100
-        );
-
-
-    }
-
-
-
-
-
-    @Override
-    protected void onActivityResult(
-            int requestCode,
-            int resultCode,
-            Intent data) {
-
-
-        super.onActivityResult(
-                requestCode,
-                resultCode,
-                data
-        );
-
-
-
-        if(requestCode == 100 &&
-                resultCode == RESULT_OK &&
-                data != null){
-
-
-            imageUri = data.getData();
-
-
-            imgProfile.setImageURI(imageUri);
-
-
-        }
-
-
-    }
-
-
-
-
-
-    private void uploadImageToCloudinary(){
-
-
-        Toast.makeText(
-                this,
-                "Uploading image...",
-                Toast.LENGTH_SHORT
-        ).show();
-
-
-
-        CloudinaryUploader.uploadImage(
-                this,
-                imageUri,
-                new CloudinaryUploader.UploadCallback() {
-
-
-                    @Override
-                    public void onSuccess(String imageUrl) {
-
-
-                        runOnUiThread(() -> {
-
-                            saveImageUrl(imageUrl);
-
-                        });
-
-
-                    }
-
-
-
-                    @Override
-                    public void onFailure(Exception e) {
-
-
-                        runOnUiThread(() -> {
-
-
-                            Toast.makeText(
-                                    ProfileActivity.this,
-                                    e.getMessage(),
-                                    Toast.LENGTH_LONG
-                            ).show();
-
-
-                        });
-
-
-                    }
-
-
-                });
-
-
-    }
-
-
-
-
-
-    private void saveImageUrl(String imageUrl){
-
-
-
-        String uid =
-                auth.getCurrentUser().getUid();
-
-
-
-        Map<String,Object> map =
-                new HashMap<>();
-
-
-        map.put("image", imageUrl);
-
-
-
-        firestore.collection("Users")
-                .document(uid)
-                .update(map)
-                .addOnSuccessListener(unused -> {
-
-
-                    Toast.makeText(
-                            this,
-                            "Profile image updated",
-                            Toast.LENGTH_SHORT
-                    ).show();
-
-
-
-                    loadUserProfile();
-
-
-
-                })
-                .addOnFailureListener(e -> {
-
-
-                    Toast.makeText(
-                            this,
-                            e.getMessage(),
-                            Toast.LENGTH_LONG
-                    ).show();
-
-
-                });
-
-
-
-    }
-
-
-
-
-
 
     @Override
     protected void onResume() {
         super.onResume();
-        loadUserProfile();
-        loadMyPosts();
-        loadFollowCounts();
+
+        // Reloaded here only (not additionally in onCreate) so each load runs once per visit
+        if (profileUid != null) {
+            loadUserProfile();
+            loadPosts();
+            loadFollowCounts();
+        }
     }
-    private void loadMyPosts(){
 
+    // ---------------------------------------------------------------------
 
+    private void renderFollowButton() {
+        btnFollow.setText(following ? "Following" : "Follow");
+    }
+
+    private void toggleFollow() {
+
+        if (followBusy) return;
+
+        followBusy = true;
+        btnFollow.setEnabled(false);
+
+        FollowHelper.toggleFollow(profileUid, new FollowHelper.ToggleCallback() {
+
+            @Override
+            public void onSuccess(boolean nowFollowing) {
+                followBusy = false;
+                following = nowFollowing;
+                btnFollow.setEnabled(true);
+                renderFollowButton();
+                loadFollowCounts();
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                followBusy = false;
+                btnFollow.setEnabled(true);
+                Toast.makeText(ProfileActivity.this,
+                        "Couldn't update follow. Check your connection.",
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void loadUserProfile() {
+
+        progressBar.setVisibility(View.VISIBLE);
+
+        firestore.collection("Users")
+                .document(profileUid)
+                .get()
+                .addOnSuccessListener(doc -> {
+
+                    progressBar.setVisibility(View.GONE);
+
+                    if (isDestroyed() || !doc.exists()) return;
+
+                    currentName = doc.getString("name");
+                    currentUsername = doc.getString("username");
+
+                    tvName.setText(currentName == null ? "" : currentName);
+                    tvUsername.setText(currentUsername == null ? "" : "@" + currentUsername);
+
+                    String bio = doc.getString("bio");
+                    tvBio.setText(bio == null ? "" : bio);
+                    tvBio.setVisibility(bio == null || bio.isEmpty() ? View.GONE : View.VISIBLE);
+
+                    // The e-mail address is private: only show it on your own profile
+                    String email = doc.getString("email");
+
+                    if (isMe && email != null && !email.isEmpty()) {
+                        tvEmail.setText(email);
+                        tvEmail.setVisibility(View.VISIBLE);
+                    } else {
+                        tvEmail.setVisibility(View.GONE);
+                    }
+
+                    String imageUrl = doc.getString("image");
+
+                    if (imageUrl != null && !imageUrl.isEmpty()) {
+                        Glide.with(this)
+                                .load(imageUrl)
+                                .placeholder(R.drawable.ic_person)
+                                .error(R.drawable.ic_person)
+                                .into(imgProfile);
+                    } else {
+                        imgProfile.setImageResource(R.drawable.ic_person);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    progressBar.setVisibility(View.GONE);
+                    Toast.makeText(this, "Couldn't load profile", Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void loadPosts() {
 
         firestore.collection("Posts")
                 .whereEqualTo("uid", profileUid)
                 .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
+                .addOnSuccessListener(snapshot -> {
 
+                    if (isDestroyed()) return;
 
                     myPosts.clear();
 
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
 
-                    for(DocumentSnapshot doc : queryDocumentSnapshots){
+                        Post post = doc.toObject(Post.class);
 
-                        Post post =
-                                doc.toObject(Post.class);
-
-
-                        if(post != null){
-
+                        if (post != null) {
+                            post.setPostId(doc.getId());
                             myPosts.add(post);
-
                         }
-
                     }
+
+                    // Newest first (sorted here so no composite index is required)
+                    Collections.sort(myPosts, (a, b) ->
+                            Long.compare(b.getTimestamp(), a.getTimestamp()));
+
                     postAdapter.notifyDataSetChanged();
 
-
-                    tvPostCount.setText(
-                            String.valueOf(myPosts.size())
-
-                    );
-
-
-
+                    tvPostCount.setText(String.valueOf(myPosts.size()));
+                    tvNoPosts.setVisibility(myPosts.isEmpty() ? View.VISIBLE : View.GONE);
                 });
-
     }
+
     private void loadFollowCounts() {
 
-        firestore.collection("Users")
-                .document(profileUid)
-                .collection("Followers")
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
+        FollowHelper.getCount(profileUid, "Followers", count ->
+                tvFollowers.setText(String.valueOf(count)));
 
-                    tvFollowers.setText(
-                            String.valueOf(queryDocumentSnapshots.size())
-                    );
-
-                });
-
-        firestore.collection("Users")
-                .document(profileUid)
-                .collection("Following")
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-
-                    tvFollowing.setText(
-                            String.valueOf(queryDocumentSnapshots.size())
-                    );
-
-                });
-
+        FollowHelper.getCount(profileUid, "Following", count ->
+                tvFollowing.setText(String.valueOf(count)));
     }
 
+    private void uploadProfileImage(Uri uri) {
 
+        Toast.makeText(this, "Uploading photo...", Toast.LENGTH_SHORT).show();
 
+        btnUploadImage.setEnabled(false);
 
+        CloudinaryUploader.uploadImage(this, uri, new CloudinaryUploader.UploadCallback() {
+
+            @Override
+            public void onSuccess(String url) {
+
+                firestore.collection("Users")
+                        .document(myUid)
+                        .update("image", url)
+                        .addOnSuccessListener(unused -> {
+
+                            btnUploadImage.setEnabled(true);
+
+                            // keep the photo shown on old posts in sync
+                            PostHelper.syncAuthorInfo(myUid, null, null, url);
+
+                            if (!isDestroyed()) {
+                                Toast.makeText(ProfileActivity.this,
+                                        "Profile photo updated", Toast.LENGTH_SHORT).show();
+                                loadPosts();
+                            }
+                        })
+                        .addOnFailureListener(e -> {
+                            btnUploadImage.setEnabled(true);
+                            Toast.makeText(ProfileActivity.this,
+                                    "Couldn't save photo", Toast.LENGTH_LONG).show();
+                            loadUserProfile();
+                        });
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                btnUploadImage.setEnabled(true);
+                Toast.makeText(ProfileActivity.this,
+                        e.getMessage() == null ? "Upload failed" : e.getMessage(),
+                        Toast.LENGTH_LONG).show();
+                loadUserProfile();
+            }
+        });
+    }
 }

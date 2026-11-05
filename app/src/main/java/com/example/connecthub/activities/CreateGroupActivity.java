@@ -3,7 +3,6 @@ package com.example.connecthub.activities;
 import android.os.Bundle;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -13,20 +12,22 @@ import com.example.connecthub.models.Group;
 import com.example.connecthub.models.GroupMemberInfo;
 import com.example.connecthub.models.MembershipPeriod;
 import com.example.connecthub.models.User;
+import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
-public class CreateGroupActivity extends AppCompatActivity {
+public class CreateGroupActivity extends BaseActivity {
 
-    private RecyclerView rvUsers;
     private TextInputEditText etGroupName;
     private MaterialButton btnCreateGroup;
 
@@ -41,7 +42,10 @@ public class CreateGroupActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_group);
 
-        rvUsers = findViewById(R.id.rvUsers);
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> finish());
+
+        RecyclerView rvUsers = findViewById(R.id.rvUsers);
         etGroupName = findViewById(R.id.etGroupName);
         btnCreateGroup = findViewById(R.id.btnCreateGroup);
 
@@ -69,74 +73,64 @@ public class CreateGroupActivity extends AppCompatActivity {
 
         db.collection("Users")
                 .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
+                .addOnSuccessListener(snapshot -> {
 
                     userList.clear();
 
-                    for (QueryDocumentSnapshot doc :
-                            queryDocumentSnapshots) {
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
 
                         User user = doc.toObject(User.class);
 
-                        if (user != null &&
-                                !currentUid.equals(user.getUid())) {
+                        if (user == null) continue;
 
+                        user.setUid(doc.getId());
+
+                        if (!currentUid.equals(user.getUid())) {
                             userList.add(user);
                         }
                     }
 
+                    Collections.sort(userList, (a, b) -> {
+                        String x = a.getName() == null ? "" : a.getName().toLowerCase(Locale.getDefault());
+                        String y = b.getName() == null ? "" : b.getName().toLowerCase(Locale.getDefault());
+                        return x.compareTo(y);
+                    });
+
                     adapter.notifyDataSetChanged();
-
                 })
-                .addOnFailureListener(e -> {
-
-                    Toast.makeText(
-                            this,
-                            "Failed to load users",
-                            Toast.LENGTH_SHORT
-                    ).show();
-
-                });
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Failed to load users", Toast.LENGTH_SHORT).show());
     }
 
     private void createGroup() {
 
-        String groupName = etGroupName.getText().toString().trim();
+        if (auth.getCurrentUser() == null) return;
+
+        String groupName = etGroupName.getText() == null
+                ? "" : etGroupName.getText().toString().trim();
 
         if (groupName.isEmpty()) {
-
-            Toast.makeText(
-                    this,
-                    "Enter group name",
-                    Toast.LENGTH_SHORT
-            ).show();
-
+            etGroupName.setError("Enter a group name");
+            etGroupName.requestFocus();
             return;
         }
 
-        List<String> members =
-                new ArrayList<>(adapter.getSelectedUsers());
+        List<String> members = new ArrayList<>(adapter.getSelectedUsers());
 
-        String myUid =
-                auth.getCurrentUser().getUid();
         if (members.isEmpty()) {
-
-            Toast.makeText(
-                    this,
-                    "Select at least one member",
-                    Toast.LENGTH_SHORT
-            ).show();
-
+            Toast.makeText(this, "Select at least one member", Toast.LENGTH_SHORT).show();
             return;
         }
+
+        String myUid = auth.getCurrentUser().getUid();
+
         if (!members.contains(myUid)) {
             members.add(myUid);
         }
 
-        String groupId =
-                db.collection("Groups")
-                        .document()
-                        .getId();
+        btnCreateGroup.setEnabled(false);
+
+        String groupId = db.collection("Groups").document().getId();
 
         long now = System.currentTimeMillis();
 
@@ -146,69 +140,34 @@ public class CreateGroupActivity extends AppCompatActivity {
         group.setGroupName(groupName);
         group.setCreatedBy(myUid);
         group.setCreatedAt(now);
-
         group.setMembers(members);
         group.setMembersCount(members.size());
 
-        // =====================================
-        // Current Member Info
-        // =====================================
-
-        Map<String, GroupMemberInfo> memberInfo =
-                new HashMap<>();
+        Map<String, GroupMemberInfo> memberInfo = new HashMap<>();
+        Map<String, List<MembershipPeriod>> memberHistory = new HashMap<>();
 
         for (String uid : members) {
 
-            GroupMemberInfo info =
-                    new GroupMemberInfo();
-
+            GroupMemberInfo info = new GroupMemberInfo();
             info.setJoinedAt(now);
             info.setActive(true);
-
             memberInfo.put(uid, info);
-        }
 
-        group.setMemberInfo(memberInfo);
-
-        // =====================================
-        // Membership History
-        // =====================================
-
-        Map<String, List<MembershipPeriod>> memberHistory =
-                new HashMap<>();
-
-        for (String uid : members) {
-
-            List<MembershipPeriod> periods =
-                    new ArrayList<>();
-
-            MembershipPeriod period =
-                    new MembershipPeriod();
-
+            MembershipPeriod period = new MembershipPeriod();
             period.setJoinedAt(now);
             period.setLeftAt(null);
 
+            List<MembershipPeriod> periods = new ArrayList<>();
             periods.add(period);
-
             memberHistory.put(uid, periods);
         }
 
+        group.setMemberInfo(memberInfo);
         group.setMemberHistory(memberHistory);
 
-        // =====================================
-        // Admins
-        // =====================================
-
-        List<String> admins =
-                new ArrayList<>();
-
+        List<String> admins = new ArrayList<>();
         admins.add(myUid);
-
         group.setAdmins(admins);
-
-        // =====================================
-        // Last Message
-        // =====================================
 
         group.setLastMessage("");
         group.setLastMessageTime(now);
@@ -217,25 +176,14 @@ public class CreateGroupActivity extends AppCompatActivity {
                 .document(groupId)
                 .set(group)
                 .addOnSuccessListener(unused -> {
-
-                    Toast.makeText(
-                            this,
-                            "Group Created",
-                            Toast.LENGTH_SHORT
-                    ).show();
-
+                    Toast.makeText(this, "Group created", Toast.LENGTH_SHORT).show();
                     finish();
-
                 })
-                .addOnFailureListener(e ->
-
-                        Toast.makeText(
-                                this,
-                                e.getMessage(),
-                                Toast.LENGTH_SHORT
-                        ).show()
-
-                );
-
+                .addOnFailureListener(e -> {
+                    btnCreateGroup.setEnabled(true);
+                    Toast.makeText(this,
+                            e.getMessage() == null ? "Couldn't create group" : e.getMessage(),
+                            Toast.LENGTH_LONG).show();
+                });
     }
 }

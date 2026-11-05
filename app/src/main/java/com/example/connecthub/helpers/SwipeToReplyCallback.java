@@ -33,7 +33,18 @@ public class SwipeToReplyCallback extends ItemTouchHelper.SimpleCallback {
             @NonNull RecyclerView.ViewHolder viewHolder,
             int direction
     ) {
-        listener.onReply(viewHolder.getAdapterPosition());
+        int position = viewHolder.getBindingAdapterPosition();
+
+        // NO_POSITION (-1) can happen if the list changed during the swipe
+        if (position != RecyclerView.NO_POSITION) {
+            listener.onReply(position);
+        }
+    }
+
+    @Override
+    public float getSwipeThreshold(@NonNull RecyclerView.ViewHolder viewHolder) {
+        // reply after a short swipe (default is half the screen width)
+        return 0.2f;
     }
 
     @Override

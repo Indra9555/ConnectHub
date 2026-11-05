@@ -1,203 +1,242 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/chatToolbar"
-        android:layout_width="0dp"
+        style="@style/Widget.ConnectHub.Toolbar"
+        android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        android:contentInsetStartWithNavigation="0dp"
+        app:contentInsetStartWithNavigation="0dp"
+        app:navigationIcon="@drawable/ic_arrow_back">
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:id="@+id/layoutChatHeader"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:background="?attr/selectableItemBackground"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <ImageView
+            <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/imgUser"
-                android:layout_width="42dp"
-                android:layout_height="42dp"
-                android:layout_marginEnd="10dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:contentDescription="Chat photo"
                 android:scaleType="centerCrop"
-                android:src="@drawable/ic_person"/>
+                android:src="@drawable/ic_person"
+                app:shapeAppearanceOverlay="@style/CircleImage" />
 
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
                 android:orientation="vertical">
 
                 <TextView
                     android:id="@+id/tvChatName"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="User"
-                    android:textStyle="bold"
-                    android:textSize="17sp"/>
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
 
                 <TextView
-                    android:id="@+id/tvUserStatus"
-                    android:layout_width="wrap_content"
+                    android:id="@+id/tvStatus"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Offline"
-                    android:textSize="12sp"/>
-
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="12sp" />
             </LinearLayout>
-
         </LinearLayout>
-
     </com.google.android.material.appbar.MaterialToolbar>
-
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerMessages"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:padding="8dp"
+        android:layout_weight="1"
         android:clipToPadding="false"
-        app:layout_constraintTop_toBottomOf="@id/chatToolbar"
-        app:layout_constraintBottom_toTopOf="@id/inputCard"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        android:paddingVertical="6dp" />
 
-
-    <com.google.android.material.card.MaterialCardView
+    <LinearLayout
         android:id="@+id/inputCard"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="8dp"
-        app:cardCornerRadius="28dp"
-        app:cardElevation="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+        android:orientation="vertical">
 
         <LinearLayout
+            android:id="@+id/layoutReply"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:background="@color/reply_bar_bg"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="4dp"
+            android:paddingVertical="6dp"
+            android:visibility="gone">
 
-            <!-- Reply Preview -->
             <LinearLayout
-                android:id="@+id/layoutReply"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:background="#EEEEEE"
-                android:orientation="vertical"
-                android:padding="10dp"
-                android:visibility="gone">
+                android:layout_weight="1"
+                android:orientation="vertical">
 
                 <TextView
                     android:id="@+id/tvReplySender"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="You"
-                    android:textColor="@android:color/holo_blue_dark"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="13sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/tvReplyMessage"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:maxLines="2"
-                    android:textColor="#444444" />
-
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="14sp" />
             </LinearLayout>
 
-            <!-- NORMAL INPUT -->
-            <LinearLayout
-                android:id="@+id/layoutInput"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="10dp"
-                android:paddingEnd="6dp">
+            <ImageButton
+                android:id="@+id/btnCancelReply"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Cancel reply"
+                android:src="@drawable/ic_close" />
+        </LinearLayout>
 
-                <EditText
-                    android:id="@+id/etMessage"
-                    android:layout_width="0dp"
+        <LinearLayout
+            android:id="@+id/layoutInput"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="bottom"
+            android:orientation="horizontal"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="8dp">
+
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:background="@android:color/transparent"
-                    android:hint="Type a message..."
-                    android:imeOptions="actionSend"
-                    android:inputType="textCapSentences|textMultiLine"
-                    android:maxLines="5"
-                    android:minHeight="48dp" />
+                    android:background="@drawable/bg_input_field"
+                    android:gravity="bottom"
+                    android:orientation="horizontal">
 
-                <ImageButton
-                    android:id="@+id/btnImage"
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
-                    android:background="@android:color/transparent"
-                    android:contentDescription="Image"
-                    android:src="@drawable/ic_image" />
+                    <EditText
+                        android:id="@+id/etMessage"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@null"
+                        android:hint="Message"
+                        android:inputType="textCapSentences|textMultiLine"
+                        android:maxLines="5"
+                        android:minHeight="48dp"
+                        android:paddingHorizontal="16dp"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textColorHint="?attr/colorOnSurfaceVariant" />
+
+                    <ImageButton
+                        android:id="@+id/btnImage"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Send image"
+                        android:src="@drawable/ic_image" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/layoutRecording"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:background="@drawable/bg_input_field"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="16dp"
+                    android:visibility="gone">
+
+                    <View
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
+                        android:background="@drawable/badge_dot_red" />
+
+                    <TextView
+                        android:id="@+id/tvRecordingTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:text="0:00"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/tvSlideCancel"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:text="◀ Slide to cancel"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </FrameLayout>
+
+            <FrameLayout
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp">
 
                 <ImageButton
                     android:id="@+id/btnMic"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Record Voice"
-                    android:src="@android:drawable/ic_btn_speak_now" />
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_unread_badge"
+                    android:backgroundTint="?attr/colorPrimary"
+                    android:contentDescription="Hold to record a voice message"
+                    android:src="@drawable/ic_mic"
+                    app:tint="?attr/colorOnPrimary" />
 
                 <ImageButton
                     android:id="@+id/btnSend"
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
-                    android:layout_marginStart="4dp"
-                    android:backgroundTint="@color/purple_500"
-                    android:contentDescription="Send"
-                    android:src="@drawable/ic_send" />
-
-            </LinearLayout>
-
-            <!-- RECORDING LAYOUT -->
-            <LinearLayout
-                android:id="@+id/layoutRecording"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:visibility="gone">
-
-                <ImageView
-                    android:layout_width="26dp"
-                    android:layout_height="26dp"
-                    android:src="@android:drawable/ic_btn_speak_now" />
-
-                <TextView
-                    android:id="@+id/tvRecordingTime"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:text="00:00"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvSlideCancel"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="end"
-                    android:text="◀ Slide to cancel"
-                    android:textColor="#777777"
-                    android:textSize="15sp" />
-
-            </LinearLayout>
-
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_unread_badge"
+                    android:backgroundTint="?attr/colorPrimary"
+                    android:contentDescription="Send message"
+                    android:src="@drawable/ic_send"
+                    android:visibility="gone"
+                    app:tint="?attr/colorOnPrimary" />
+            </FrameLayout>
         </LinearLayout>
 
-    </com.google.android.material.card.MaterialCardView>
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <TextView
+            android:id="@+id/tvNotMember"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/reply_bar_bg"
+            android:gravity="center"
+            android:padding="16dp"
+            android:text="You can't send messages because you are no longer a member of this group"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="14sp"
+            android:visibility="gone" />
+    </LinearLayout>
+</LinearLayout>

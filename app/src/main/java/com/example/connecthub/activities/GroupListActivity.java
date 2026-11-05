@@ -2,112 +2,108 @@ package com.example.connecthub.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.TextView;
+import android.widget.Toast;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.connecthub.R;
 import com.example.connecthub.adapters.GroupAdapter;
 import com.example.connecthub.models.Group;
+import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldPath;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-public class GroupListActivity extends AppCompatActivity {
+public class GroupListActivity extends BaseActivity {
 
-    private RecyclerView rvGroups;
-    private FloatingActionButton fabCreateGroup;
-
+    private TextView tvEmpty;
     private final List<Group> groupList = new ArrayList<>();
     private GroupAdapter adapter;
-
-    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_group_list);
 
-        rvGroups = findViewById(R.id.rvGroups);
-        fabCreateGroup = findViewById(R.id.fabCreateGroup);
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            finish();
+            return;
+        }
 
-        db = FirebaseFirestore.getInstance();
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> finish());
+
+        RecyclerView rvGroups = findViewById(R.id.rvGroups);
+        FloatingActionButton fabCreateGroup = findViewById(R.id.fabCreateGroup);
+        tvEmpty = findViewById(R.id.tvEmpty);
 
         adapter = new GroupAdapter(groupList, group -> {
-
-            Intent intent =
-                    new Intent(GroupListActivity.this,
-                            ChatActivity.class);
-
+            Intent intent = new Intent(this, ChatActivity.class);
             intent.putExtra("isGroup", true);
-
             intent.putExtra("groupId", group.getGroupId());
-
             intent.putExtra("groupName", group.getGroupName());
-
             startActivity(intent);
-
         });
 
         rvGroups.setLayoutManager(new LinearLayoutManager(this));
         rvGroups.setAdapter(adapter);
 
-        loadGroups();
-
         fabCreateGroup.setOnClickListener(v ->
-                startActivity(
-                        new Intent(this,
-                                CreateGroupActivity.class)
-                ));
-    }
+                startActivity(new Intent(this, CreateGroupActivity.class)));
 
-    @Override
-    protected void onResume() {
-        super.onResume();
         loadGroups();
     }
 
+    /**
+     * Only the groups I have EVER been a member of are fetched (a server-side query on
+     * memberInfo.{uid}.joinedAt). The old code downloaded every group in the app and
+     * filtered locally, and re-did that on every onResume. The live listener also makes
+     * new groups / last-message previews appear without reopening the screen.
+     */
     private void loadGroups() {
 
-        String uid = FirebaseAuth.getInstance()
-                .getCurrentUser()
-                .getUid();
+        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
-        db.collection("Groups")
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
+        FirebaseFirestore.getInstance()
+                .collection("Groups")
+                .whereGreaterThan(FieldPath.of("memberInfo", uid, "joinedAt"), 0)
+                .addSnapshotListener(this, (snapshot, error) -> {
+
+                    if (error != null) {
+                        Toast.makeText(this, "Couldn't load groups", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    if (snapshot == null) return;
 
                     groupList.clear();
 
-                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
 
                         Group group = doc.toObject(Group.class);
 
                         if (group == null) continue;
 
                         group.setGroupId(doc.getId());
-
-                        // Show group if user has EVER been a member
-                        if (group.getMemberInfo() != null &&
-                                group.getMemberInfo().containsKey(uid)) {
-
-                            groupList.add(group);
-
-                        }
-
+                        groupList.add(group);
                     }
+
+                    // most recently active first
+                    Collections.sort(groupList, (a, b) ->
+                            Long.compare(b.getLastMessageTime(), a.getLastMessageTime()));
 
                     adapter.notifyDataSetChanged();
 
-                })
-                .addOnFailureListener(Throwable::printStackTrace);
-
+                    tvEmpty.setVisibility(groupList.isEmpty() ? View.VISIBLE : View.GONE);
+                });
     }
 }

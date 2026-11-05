@@ -3,6 +3,8 @@ package com.example.connecthub.models;
 
 import android.net.Uri;
 
+import com.google.firebase.firestore.Exclude;
+
 import java.util.Map;
 
 public class Message {
@@ -20,6 +22,7 @@ public class Message {
     private String type;
     private boolean uploading;
     private transient Uri localImageUri;
+    private transient boolean pending;
     private String replyMessage = "";
     private String replySender = "";
     private String replyType = "";
@@ -106,15 +109,19 @@ public class Message {
     public void setType(String type) {
         this.type = type;
     }
+    @Exclude
     public boolean isUploading() {
         return uploading;
     }
+    @Exclude
     public void setUploading(boolean uploading) {
         this.uploading = uploading;
     }
+    @Exclude
     public Uri getLocalImageUri() {
         return localImageUri;
     }
+    @Exclude
     public void setLocalImageUri(Uri localImageUri) {
         this.localImageUri = localImageUri;
     }
@@ -198,6 +205,7 @@ public class Message {
         this.waveform = waveform;
     }
 
+    @Exclude
     public String getReactionSummary() {
 
         if (reactions == null || reactions.isEmpty()) {
@@ -226,6 +234,16 @@ public class Message {
     public void setSenderName(String senderName) {
         this.senderName = senderName;
     }
+    @Exclude
+    public boolean isPending() {
+        return pending;
+    }
+
+    @Exclude
+    public void setPending(boolean pending) {
+        this.pending = pending;
+    }
+
     public Map<String, Long> getReadBy() {
         return readBy;
     }

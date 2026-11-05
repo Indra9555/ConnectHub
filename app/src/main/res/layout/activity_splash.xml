@@ -1,27 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/system_inverse_primary_dark">
+    android:background="@color/splash_background"
+    android:gravity="center"
+    android:orientation="vertical">
 
     <ImageView
         android:id="@+id/logo"
-        android:layout_width="120dp"
-        android:layout_height="120dp"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="170dp"
+        android:layout_width="140dp"
+        android:layout_height="140dp"
+        android:contentDescription="ConnectHub logo"
         android:src="@drawable/connecthub_logo" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/logo"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="16dp"
         android:text="ConnectHub"
-        android:textColor="#FFFFFF"
-        android:textSize="32sp"
+        android:textColor="@color/splash_title"
+        android:textSize="30sp"
         android:textStyle="bold" />
 
-</RelativeLayout>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Stay connected"
+        android:textColor="@color/splash_title"
+        android:textSize="15sp" />
+</LinearLayout>

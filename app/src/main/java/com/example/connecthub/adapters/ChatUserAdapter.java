@@ -28,63 +28,46 @@ public class ChatUserAdapter extends RecyclerView.Adapter<ChatUserAdapter.ChatVi
 
     @NonNull
     @Override
-    public ChatViewHolder onCreateViewHolder(
-            @NonNull ViewGroup parent,
-            int viewType) {
-
+    public ChatViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_chat_user, parent, false);
-
         return new ChatViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(
-            @NonNull ChatViewHolder holder,
-            int position) {
+    public void onBindViewHolder(@NonNull ChatViewHolder holder, int position) {
 
         ChatUser user = chatUserList.get(position);
 
-        holder.tvName.setText(user.getName());
+        holder.tvName.setText(user.getName() == null ? "" : user.getName());
+        holder.tvLastMessage.setText(user.getLastMessage() == null ? "" : user.getLastMessage());
+        holder.tvTime.setText(TimeUtils.getTimeAgo(user.getLastTimestamp()));
 
-        holder.tvLastMessage.setText(user.getLastMessage());
-
-        holder.tvTime.setText(
-                TimeUtils.getTimeAgo(user.getLastTimestamp())
-        );
         if (user.getUnreadCount() > 0) {
-
             holder.tvUnread.setVisibility(View.VISIBLE);
-
-            holder.tvUnread.setText(
-                    String.valueOf(user.getUnreadCount())
-            );
-
+            holder.tvUnread.setText(user.getUnreadCount() > 99
+                    ? "99+" : String.valueOf(user.getUnreadCount()));
+            holder.tvName.setTypeface(null, android.graphics.Typeface.BOLD);
         } else {
-
             holder.tvUnread.setVisibility(View.GONE);
-
         }
 
-        Glide.with(holder.itemView.getContext())
-                .load(user.getImage())
-                .placeholder(R.drawable.ic_person)
-                .error(R.drawable.ic_person)
-                .into(holder.imgProfile);
+        if (user.getImage() != null && !user.getImage().isEmpty()) {
+            Glide.with(holder.itemView.getContext())
+                    .load(user.getImage())
+                    .placeholder(R.drawable.ic_person)
+                    .error(R.drawable.ic_person)
+                    .into(holder.imgProfile);
+        } else {
+            Glide.with(holder.itemView.getContext()).clear(holder.imgProfile);
+            holder.imgProfile.setImageResource(R.drawable.ic_person);
+        }
 
         holder.itemView.setOnClickListener(v -> {
-
-            Intent intent = new Intent(
-                    holder.itemView.getContext(),
-                    ChatActivity.class
-            );
-
+            Intent intent = new Intent(holder.itemView.getContext(), ChatActivity.class);
             intent.putExtra("uid", user.getUid());
-
             holder.itemView.getContext().startActivity(intent);
-
         });
-
     }
 
     @Override
@@ -93,19 +76,15 @@ public class ChatUserAdapter extends RecyclerView.Adapter<ChatUserAdapter.ChatVi
     }
 
     static class ChatViewHolder extends RecyclerView.ViewHolder {
-        TextView tvUnread;
 
-        ImageView imgProfile;
+        final TextView tvUnread;
+        final ImageView imgProfile;
+        final TextView tvName;
+        final TextView tvLastMessage;
+        final TextView tvTime;
 
-        TextView tvName;
-
-        TextView tvLastMessage;
-
-        TextView tvTime;
-
-        public ChatViewHolder(@NonNull View itemView) {
+        ChatViewHolder(@NonNull View itemView) {
             super(itemView);
-
             imgProfile = itemView.findViewById(R.id.imgProfile);
             tvName = itemView.findViewById(R.id.tvName);
             tvLastMessage = itemView.findViewById(R.id.tvLastMessage);

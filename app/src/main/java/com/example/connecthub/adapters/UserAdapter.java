@@ -12,7 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.connecthub.R;
-import com.example.connecthub.activities.ChatActivity;
+import com.example.connecthub.activities.ProfileActivity;
 import com.example.connecthub.models.User;
 import com.google.android.material.imageview.ShapeableImageView;
 
@@ -20,8 +20,8 @@ import java.util.List;
 
 public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder> {
 
-    private Context context;
-    private List<User> userList;
+    private final Context context;
+    private final List<User> userList;
 
     public UserAdapter(Context context, List<User> userList) {
         this.context = context;
@@ -31,10 +31,7 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder
     @NonNull
     @Override
     public UserViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-
-        View view = LayoutInflater.from(context)
-                .inflate(R.layout.item_user, parent, false);
-
+        View view = LayoutInflater.from(context).inflate(R.layout.item_user, parent, false);
         return new UserViewHolder(view);
     }
 
@@ -43,28 +40,25 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder
 
         User user = userList.get(position);
 
-        holder.tvName.setText(user.getName());
-        holder.tvUsername.setText("@" + user.getUsername());
+        holder.tvName.setText(user.getName() == null ? "" : user.getName());
+        holder.tvUsername.setText(user.getUsername() == null ? "" : "@" + user.getUsername());
 
         if (user.getImage() != null && !user.getImage().isEmpty()) {
-
             Glide.with(context)
                     .load(user.getImage())
                     .placeholder(R.drawable.ic_person)
                     .error(R.drawable.ic_person)
                     .into(holder.imgUser);
-
         } else {
-
+            Glide.with(context).clear(holder.imgUser);
             holder.imgUser.setImageResource(R.drawable.ic_person);
         }
 
+        // Open the profile (it has Follow + Message buttons)
         holder.itemView.setOnClickListener(v -> {
-
-            Intent intent = new Intent(context, ChatActivity.class);
+            Intent intent = new Intent(context, ProfileActivity.class);
             intent.putExtra("uid", user.getUid());
             context.startActivity(intent);
-
         });
     }
 
@@ -75,12 +69,12 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder
 
     static class UserViewHolder extends RecyclerView.ViewHolder {
 
-        ShapeableImageView imgUser;
-        TextView tvName, tvUsername;
+        final ShapeableImageView imgUser;
+        final TextView tvName;
+        final TextView tvUsername;
 
-        public UserViewHolder(@NonNull View itemView) {
+        UserViewHolder(@NonNull View itemView) {
             super(itemView);
-
             imgUser = itemView.findViewById(R.id.imgUser);
             tvName = itemView.findViewById(R.id.tvName);
             tvUsername = itemView.findViewById(R.id.tvUsername);

@@ -1,22 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="start"
     android:orientation="vertical"
     android:paddingHorizontal="8dp"
-    android:paddingVertical="4dp">
+    android:paddingVertical="3dp">
 
     <LinearLayout
         android:id="@+id/layoutBubble"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="start"
-        android:orientation="vertical"
+        android:layout_marginEnd="56dp"
         android:background="@drawable/bg_message_received"
-        android:maxWidth="280dp"
-        android:padding="10dp">
+        android:orientation="vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="8dp">
+
+        <TextView
+            android:id="@+id/tvSenderName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="2dp"
+            android:textColor="?attr/colorPrimary"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
 
         <LinearLayout
             android:id="@+id/layoutVoice"
@@ -27,31 +38,27 @@
             android:orientation="horizontal"
             android:visibility="gone">
 
-            <!-- Play Button -->
             <TextView
                 android:id="@+id/btnVoicePlay"
-                android:layout_width="36dp"
+                android:layout_width="38dp"
                 android:layout_height="38dp"
                 android:gravity="center"
                 android:text="▶"
-                android:textColor="@android:color/black"
+                android:textColor="@color/bubble_text"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
-            <!-- Right Side -->
             <LinearLayout
-                android:layout_width="190dp"
+                android:layout_width="200dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:orientation="vertical">
 
-                <!-- Waveform -->
                 <com.masoudss.lib.WaveformSeekBar
                     android:id="@+id/waveformSeekBar"
                     android:layout_width="match_parent"
                     android:layout_height="42dp" />
 
-                <!-- Duration + Speed -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -60,32 +67,28 @@
                     android:orientation="horizontal">
 
                     <TextView
-                        android:id="@+id/tvVoiceDuration"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="0:00 / 0:00"
-                        android:textColor="#666666"
-                        android:textSize="11sp" />
-
-                    <TextView
                         android:id="@+id/tvSpeed"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:background="@drawable/bg_reaction_chip"
-                        android:paddingStart="8dp"
-                        android:paddingTop="2dp"
-                        android:paddingEnd="8dp"
-                        android:paddingBottom="2dp"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="2dp"
                         android:text="1×"
-                        android:textColor="@android:color/black"
+                        android:textColor="?attr/colorOnSurface"
                         android:textSize="11sp"
                         android:textStyle="bold" />
 
+                    <TextView
+                        android:id="@+id/tvVoiceDuration"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="end"
+                        android:text="0:00 / 0:00"
+                        android:textColor="@color/bubble_meta"
+                        android:textSize="11sp" />
                 </LinearLayout>
-
             </LinearLayout>
-
         </LinearLayout>
 
         <LinearLayout
@@ -95,7 +98,9 @@
             android:layout_marginBottom="6dp"
             android:background="@drawable/bg_reply_preview"
             android:orientation="vertical"
-            android:padding="8dp"
+            android:paddingVertical="6dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="8dp"
             android:visibility="gone">
 
             <ImageView
@@ -103,6 +108,7 @@
                 android:layout_width="45dp"
                 android:layout_height="45dp"
                 android:layout_marginBottom="4dp"
+                android:contentDescription="Replied image"
                 android:scaleType="centerCrop"
                 android:visibility="gone" />
 
@@ -110,8 +116,8 @@
                 android:id="@+id/tvReplySender"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/purple_500"
-                android:textSize="11sp"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -119,26 +125,26 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="#666666"
+                android:maxLines="2"
+                android:textColor="@color/bubble_meta"
                 android:textSize="13sp" />
         </LinearLayout>
 
-        <ImageView
+        <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/imgMessage"
             android:layout_width="220dp"
             android:layout_height="220dp"
             android:layout_marginBottom="6dp"
-            android:adjustViewBounds="true"
+            android:contentDescription="Image message"
             android:scaleType="centerCrop"
-            android:visibility="gone" />
+            android:visibility="gone"
+            app:shapeAppearanceOverlay="@style/ImageCorner12" />
 
         <TextView
             android:id="@+id/tvMessage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:maxWidth="260dp"
-            android:textColor="@android:color/black"
+            android:textColor="@color/bubble_text"
             android:textSize="16sp" />
 
         <TextView
@@ -147,7 +153,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="Uploading..."
-            android:textColor="#FF9800"
+            android:textColor="@color/brand_secondary"
             android:textSize="11sp"
             android:visibility="gone" />
 
@@ -155,18 +161,18 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="end"
-            android:layout_marginTop="4dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:layout_marginTop="2dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
             <TextView
                 android:id="@+id/tvTime"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="#777777"
+                android:textColor="@color/bubble_meta"
                 android:textSize="11sp" />
-        </LinearLayout>
 
+        </LinearLayout>
     </LinearLayout>
 
     <TextView
@@ -174,17 +180,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="start"
+        android:layout_marginTop="-8dp"
         android:layout_marginStart="10dp"
-        android:layout_marginTop="-6dp"
         android:background="@drawable/bg_reaction_chip"
-        android:elevation="4dp"
-        android:paddingStart="10dp"
-        android:paddingTop="4dp"
-        android:paddingEnd="10dp"
-        android:paddingBottom="4dp"
-        android:textColor="#000000"
-        android:textSize="15sp"
-        android:textStyle="bold"
+        android:elevation="2dp"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="3dp"
+        android:textColor="?attr/colorOnSurface"
+        android:textSize="14sp"
         android:visibility="gone" />
-
 </LinearLayout>

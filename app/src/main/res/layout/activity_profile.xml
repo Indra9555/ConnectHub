@@ -1,330 +1,228 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5">
+    android:orientation="vertical">
 
-
-    <LinearLayout
-
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        style="@style/Widget.ConnectHub.Toolbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:visibility="visible"/>
+        android:layout_height="?attr/actionBarSize"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:title="Profile" />
 
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
-        <!-- Profile Card -->
-
-        <com.google.android.material.card.MaterialCardView
-
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="469dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
 
-            app:cardCornerRadius="20dp"
-            app:cardElevation="4dp">
-
-
-            <LinearLayout
-
-                android:layout_width="match_parent"
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone" />
 
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-
-                <!-- Profile Image -->
-
-                <com.google.android.material.imageview.ShapeableImageView
-
-                    android:id="@+id/imgProfile"
-
-                    android:layout_width="120dp"
-                    android:layout_height="120dp"
-
-                    android:scaleType="centerCrop"
-
-                    android:src="@drawable/ic_person"
-
-                    app:shapeAppearanceOverlay="@style/CircleImage" />
-
-
-                <TextView
-
-                    android:id="@+id/tvName"
-
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-
-                    android:layout_marginTop="15dp"
-
-                    android:text="Name"
-
-                    android:textSize="24sp"
-
-                    android:textStyle="bold" />
-
-
-                <TextView
-
-                    android:id="@+id/tvUsername"
-
-                    android:layout_width="wrap_content"
-
-                    android:layout_height="wrap_content"
-
-                    android:layout_marginTop="5dp"
-
-                    android:text="username"
-
-                    android:textSize="16sp" />
-
-
-                <TextView
-
-                    android:id="@+id/tvBio"
-
-                    android:layout_width="match_parent"
-
-                    android:layout_height="wrap_content"
-
-                    android:layout_marginTop="12dp"
-
-                    android:gravity="center"
-
-                    android:text="Bio"
-
-                    android:textSize="15sp" />
-
-
-                <TextView
-
-                    android:id="@+id/tvEmail"
-
-                    android:layout_width="wrap_content"
-
-                    android:layout_height="wrap_content"
-
-                    android:visibility="gone" />
-
-
-                <!-- Stats -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.ConnectHub.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
 
                 <LinearLayout
-
                     android:layout_width="match_parent"
-
                     android:layout_height="wrap_content"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                    android:layout_marginTop="25dp"
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:id="@+id/imgProfile"
+                        android:layout_width="112dp"
+                        android:layout_height="112dp"
+                        android:contentDescription="Profile photo"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/ic_person"
+                        app:shapeAppearanceOverlay="@style/CircleImage" />
 
-                    android:gravity="center"
+                    <TextView
+                        android:id="@+id/tvName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="24sp"
+                        android:textStyle="bold" />
 
-                    android:orientation="horizontal">
+                    <TextView
+                        android:id="@+id/tvUsername"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="16sp" />
 
+                    <TextView
+                        android:id="@+id/tvBio"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:gravity="center"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="15sp" />
+
+                    <TextView
+                        android:id="@+id/tvEmail"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="13sp"
+                        android:visibility="gone" />
 
                     <LinearLayout
-
-                        android:layout_width="0dp"
-
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        android:orientation="horizontal">
 
-                        android:layout_weight="1"
-
-                        android:gravity="center"
-
-                        android:orientation="vertical">
-
-
-                        <TextView
-
-                            android:id="@+id/tvPostCount"
-
-                            android:layout_width="wrap_content"
-
+                        <LinearLayout
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:orientation="vertical">
 
-                            android:text="0"
+                            <TextView
+                                android:id="@+id/tvPostCount"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0"
+                                android:textColor="?attr/colorOnSurface"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
 
-                            android:textSize="20sp"
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Posts"
+                                android:textColor="?attr/colorOnSurfaceVariant" />
+                        </LinearLayout>
 
-                            android:textStyle="bold" />
-
-
-                        <TextView
-
-                            android:layout_width="wrap_content"
-
+                        <LinearLayout
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:orientation="vertical">
 
-                            android:text="Posts" />
+                            <TextView
+                                android:id="@+id/tvFollowers"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0"
+                                android:textColor="?attr/colorOnSurface"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
 
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Followers"
+                                android:textColor="?attr/colorOnSurfaceVariant" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvFollowing"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0"
+                                android:textColor="?attr/colorOnSurface"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Following"
+                                android:textColor="?attr/colorOnSurfaceVariant" />
+                        </LinearLayout>
                     </LinearLayout>
 
-
-                    <LinearLayout
-
-                        android:layout_width="0dp"
-
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnEditProfile"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        android:text="Edit profile" />
 
-                        android:layout_weight="1"
-
-                        android:gravity="center"
-
-                        android:orientation="vertical">
-
-
-                        <TextView
-
-                            android:id="@+id/tvFollowers"
-
-                            android:layout_width="wrap_content"
-
-                            android:layout_height="wrap_content"
-
-                            android:text="0"
-
-                            android:textSize="20sp"
-
-                            android:textStyle="bold" />
-
-
-                        <TextView
-
-                            android:layout_width="wrap_content"
-
-                            android:layout_height="wrap_content"
-
-                            android:text="Followers" />
-
-                    </LinearLayout>
-
-
-                    <LinearLayout
-
-                        android:layout_width="0dp"
-
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnUploadImage"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Change photo" />
 
-                        android:layout_weight="1"
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFollow"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        android:text="Follow"
+                        android:visibility="gone" />
 
-                        android:gravity="center"
-
-                        android:orientation="vertical">
-
-
-                        <TextView
-
-                            android:id="@+id/tvFollowing"
-
-                            android:layout_width="wrap_content"
-
-                            android:layout_height="wrap_content"
-
-                            android:text="0"
-
-                            android:textSize="20sp"
-
-                            android:textStyle="bold" />
-
-
-                        <TextView
-
-                            android:layout_width="wrap_content"
-
-                            android:layout_height="wrap_content"
-
-                            android:text="Following" />
-
-
-                    </LinearLayout>
-
-
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMessage"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Message"
+                        android:visibility="gone" />
                 </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
+            <TextView
+                android:id="@+id/tvPostsTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="4dp"
+                android:text="Posts"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="20sp"
+                android:textStyle="bold" />
 
-                <Button
+            <TextView
+                android:id="@+id/tvNoPosts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:padding="24dp"
+                android:text="No posts yet"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone" />
 
-                    android:id="@+id/btnEditProfile"
-
-                    android:layout_width="match_parent"
-
-                    android:layout_height="wrap_content"
-
-                    android:layout_marginTop="25dp"
-
-                    android:text="Edit Profile" />
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnFollow"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="20dp"
-                    android:text="Follow"
-                    android:visibility="gone"/>
-
-
-                <Button
-
-                    android:id="@+id/btnUploadImage"
-
-                    android:layout_width="match_parent"
-
-                    android:layout_height="wrap_content"
-
-                    android:layout_marginTop="10dp"
-
-                    android:text="Change Profile Image" />
-
-
-
-            </LinearLayout>
-
-
-        </com.google.android.material.card.MaterialCardView>
-
-
-
-        <!-- My Posts -->
-
-        <TextView
-
-            android:layout_width="wrap_content"
-
-            android:layout_height="wrap_content"
-
-            android:text="My Posts"
-
-            android:textSize="22sp"
-
-            android:textStyle="bold"
-
-            android:layout_marginTop="25dp"/>
-
-
-
-        <androidx.recyclerview.widget.RecyclerView
-
-            android:id="@+id/recyclerMyPosts"
-
-            android:layout_width="match_parent"
-
-            android:layout_height="wrap_content"
-
-            android:nestedScrollingEnabled="false"/>
-
-
-    </LinearLayout>
-
-
-</ScrollView>
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerMyPosts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

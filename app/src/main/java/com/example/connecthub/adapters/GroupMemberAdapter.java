@@ -14,7 +14,6 @@ import com.example.connecthub.R;
 import com.example.connecthub.models.User;
 import com.google.firebase.auth.FirebaseAuth;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class GroupMemberAdapter
@@ -23,16 +22,22 @@ public class GroupMemberAdapter
     private final List<User> members;
     private List<String> admins;
     private boolean isAdmin;
-
-
+    private String ownerUid = "";
 
     private final OnRemoveClickListener listener;
     private final OnPromoteClickListener promoteListener;
+    private final OnDemoteClickListener demoteListener;
+
     public interface OnRemoveClickListener {
         void onRemove(User user);
     }
+
     public interface OnPromoteClickListener {
         void onPromote(User user);
+    }
+
+    public interface OnDemoteClickListener {
+        void onDemote(User user);
     }
 
     public GroupMemberAdapter(
@@ -40,13 +45,15 @@ public class GroupMemberAdapter
             List<String> admins,
             boolean isAdmin,
             OnRemoveClickListener listener,
-            OnPromoteClickListener promoteListener) {
+            OnPromoteClickListener promoteListener,
+            OnDemoteClickListener demoteListener) {
 
         this.members = members;
         this.admins = admins;
         this.isAdmin = isAdmin;
         this.listener = listener;
         this.promoteListener = promoteListener;
+        this.demoteListener = demoteListener;
     }
 
     @NonNull
@@ -68,31 +75,38 @@ public class GroupMemberAdapter
 
         User user = members.get(position);
 
-        // Debug Logs
-        android.util.Log.d("ADMIN_CHECK",
-                "User = " + user.getName());
+        String myUid = FirebaseAuth.getInstance()
+                .getCurrentUser()
+                .getUid();
 
-        android.util.Log.d("ADMIN_CHECK",
-                "UID = " + user.getUid());
+        boolean userIsAdmin =
+                admins != null &&
+                        admins.contains(user.getUid());
 
-        android.util.Log.d("ADMIN_CHECK",
-                "Admins = " + admins);
-
-        android.util.Log.d("ADMIN_CHECK",
-                "Contains = " + admins.contains(user.getUid()));
-
+        // ==========================
         // Name
-        holder.tvName.setText(user.getName());
+        // ==========================
 
+        boolean userIsOwner = user.getUid() != null && user.getUid().equals(ownerUid);
+
+        holder.tvName.setText(user.getName() == null ? "" : user.getName()
+                + (user.getUid() != null && user.getUid().equals(myUid) ? " (You)" : ""));
+
+        // ==========================
         // Profile Image
+        // ==========================
+
         Glide.with(holder.itemView.getContext())
-                .load(user.getImage())
+                .load(user.getImage() == null || user.getImage().isEmpty() ? null : user.getImage())
                 .placeholder(R.drawable.ic_person)
                 .error(R.drawable.ic_person)
                 .into(holder.imgProfile);
 
+        // ==========================
         // Admin Label
-        if (admins != null && admins.contains(user.getUid())) {
+        // ==========================
+
+        if (userIsAdmin) {
 
             holder.tvRole.setVisibility(View.VISIBLE);
             holder.tvRole.setText("Admin");
@@ -100,56 +114,75 @@ public class GroupMemberAdapter
         } else {
 
             holder.tvRole.setVisibility(View.GONE);
-
         }
 
         // ==========================
-        // Promote Button
-        // ==========================
+// Promote / Demote Button
+// ==========================
 
-        if (isAdmin &&
-                admins != null &&
-                !admins.contains(user.getUid())) {
+        if (isAdmin && !user.getUid().equals(myUid)) {
 
             holder.btnPromote.setVisibility(View.VISIBLE);
 
-            holder.btnPromote.setOnClickListener(v ->
-                    promoteListener.onPromote(user));
+            if (userIsAdmin) {
+
+                // Admin → Demote
+
+                holder.btnPromote.setImageResource(R.drawable.ic_star);
+                holder.btnPromote.setContentDescription(
+                        "Demote admin"
+                );
+
+                holder.btnPromote.setOnClickListener(v ->
+                        demoteListener.onDemote(user)
+                );
+
+            } else {
+
+                // Member → Promote
+
+                holder.btnPromote.setImageResource(R.drawable.ic_star_outline);
+                holder.btnPromote.setContentDescription(
+                        "Promote to admin"
+                );
+
+                holder.btnPromote.setOnClickListener(v ->
+                        promoteListener.onPromote(user)
+                );
+            }
 
         } else {
 
             holder.btnPromote.setVisibility(View.GONE);
-
+            holder.btnPromote.setOnClickListener(null);
         }
 
         // ==========================
         // Remove Button
         // ==========================
 
-        String myUid = FirebaseAuth.getInstance()
-                .getCurrentUser()
-                .getUid();
-
         if (isAdmin && !user.getUid().equals(myUid)) {
 
             holder.btnRemove.setVisibility(View.VISIBLE);
 
             holder.btnRemove.setOnClickListener(v ->
-                    listener.onRemove(user));
+                    listener.onRemove(user)
+            );
 
         } else {
 
             holder.btnRemove.setVisibility(View.GONE);
-
+            holder.btnRemove.setOnClickListener(null);
         }
-
     }
 
-    public void updateAdmins(List<String> admins, boolean isAdmin) {
+    public void setOwner(String ownerUid) {
+        this.ownerUid = ownerUid == null ? "" : ownerUid;
+    }
 
-        if (this.admins == null) {
-            this.admins = new ArrayList<>();
-        }
+    public void updateAdmins(
+            List<String> admins,
+            boolean isAdmin) {
 
         this.admins.clear();
 
@@ -161,6 +194,7 @@ public class GroupMemberAdapter
 
         notifyDataSetChanged();
     }
+
     @Override
     public int getItemCount() {
         return members.size();
@@ -170,21 +204,31 @@ public class GroupMemberAdapter
             extends RecyclerView.ViewHolder {
 
         ImageView imgProfile;
-
         ImageView btnRemove;
+        ImageView btnPromote;
 
         TextView tvName;
-
         TextView tvRole;
-        ImageView btnPromote;
-        public MemberViewHolder(@NonNull View itemView) {
+
+        public MemberViewHolder(
+                @NonNull View itemView) {
+
             super(itemView);
 
-            imgProfile = itemView.findViewById(R.id.imgProfile);
-            tvName = itemView.findViewById(R.id.tvName);
-            btnRemove = itemView.findViewById(R.id.btnRemove);
-            tvRole = itemView.findViewById(R.id.tvRole);
-            btnPromote = itemView.findViewById(R.id.btnPromote);
+            imgProfile =
+                    itemView.findViewById(R.id.imgProfile);
+
+            tvName =
+                    itemView.findViewById(R.id.tvName);
+
+            btnRemove =
+                    itemView.findViewById(R.id.btnRemove);
+
+            tvRole =
+                    itemView.findViewById(R.id.tvRole);
+
+            btnPromote =
+                    itemView.findViewById(R.id.btnPromote);
         }
     }
 }

@@ -1,75 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-<androidx.coordinatorlayout.widget.CoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-
-
-    <!-- Top App Bar -->
-
     <com.google.android.material.appbar.MaterialToolbar
-
         android:id="@+id/homeToolbar"
-
-        android:layout_width="match_parent"
-
+        style="@style/Widget.ConnectHub.Toolbar"
+        android:layout_width="0dp"
         android:layout_height="?attr/actionBarSize"
-
-        android:background="@color/white"
-
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
         app:title="ConnectHub"
-
-        app:titleTextAppearance="@style/TextAppearance.MaterialComponents.Headline6"
-
-        app:titleTextColor="@color/black"
-
-        app:menu="@menu/home_menu"/>
-
-
-
-    <!-- Feed -->
+        app:titleTextAppearance="@style/TextAppearance.ConnectHub.Title" />
 
     <androidx.recyclerview.widget.RecyclerView
-
         android:id="@+id/recyclerPosts"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:paddingTop="4dp"
+        android:paddingBottom="88dp"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/homeToolbar" />
 
-        android:layout_width="match_parent"
-
-        android:layout_height="match_parent"
-
-        android:layout_marginTop="?attr/actionBarSize"
-
-        android:padding="8dp"
-
-        android:clipToPadding="false"/>
-
-
-
-    <!-- Floating Create Button -->
-
+    <TextView
+        android:id="@+id/tvEmpty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="32dp"
+        android:text="No posts yet.\nTap + to share the first one!"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:textSize="16sp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/homeToolbar" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
-
         android:id="@+id/btnCreatePost"
-
         android:layout_width="wrap_content"
-
         android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:contentDescription="Create post"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:srcCompat="@drawable/ic_add" />
 
-        android:layout_gravity="bottom|end"
-
-        android:layout_margin="20dp"
-
-        android:src="@android:drawable/ic_input_add"
-
-        app:tint="@android:color/white"
-
-        app:backgroundTint="@color/purple_500"/>
-
-
-
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNav"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:labelVisibilityMode="labeled"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:menu="@menu/bottom_nav_menu" />
+</androidx.constraintlayout.widget.ConstraintLayout>

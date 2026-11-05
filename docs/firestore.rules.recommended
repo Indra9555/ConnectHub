@@ -1,0 +1,90 @@
+rules_version = '2';
+
+// RECOMMENDED starting point - review it against your Firebase console before deploying.
+// It matches the queries the app now makes (the chat screens only query their own messages,
+// the chat list only its own chats, ...), so tightening the rules no longer breaks the app.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+
+    match /Users/{uid} {
+      allow read: if signedIn();
+      allow create, update, delete: if me() == uid;
+
+      match /Following/{other} {
+        allow read: if signedIn();
+        allow write: if me() == uid;
+      }
+      match /Followers/{follower} {
+        allow read: if signedIn();
+        // a follower adds / removes THEMSELVES in someone else's list
+        allow write: if me() == follower || me() == uid;
+      }
+    }
+
+    match /Posts/{postId} {
+      allow read: if signedIn();
+      allow create: if me() == request.resource.data.uid;
+      allow delete: if me() == resource.data.uid;
+      // owner may edit everything, anybody may change the two counters (likes / comments)
+      allow update: if me() == resource.data.uid
+        || request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['likesCount', 'commentsCount']);
+
+      match /Likes/{likeUid} {
+        allow read: if signedIn();
+        allow write: if me() == likeUid;
+      }
+      match /Comments/{commentId} {
+        allow read: if signedIn();
+        allow create: if me() == request.resource.data.uid;
+        allow delete: if me() == resource.data.uid;
+      }
+    }
+
+    match /Notifications/{id} {
+      allow create: if me() == request.resource.data.senderId;
+      allow read, update: if me() == resource.data.receiverId;
+      allow delete: if me() == resource.data.receiverId || me() == resource.data.senderId;
+    }
+
+    match /Messages/{id} {
+      allow create: if me() == request.resource.data.senderId;
+      allow read: if me() == resource.data.senderId || me() == resource.data.receiverId;
+      // seen flag, reactions, delete-for-everyone
+      allow update: if me() == resource.data.senderId || me() == resource.data.receiverId;
+    }
+
+    match /Chats/{chatId} {
+      allow read: if me() == resource.data.senderId || me() == resource.data.receiverId;
+      allow create, update: if me() == request.resource.data.senderId
+        || me() == request.resource.data.receiverId;
+    }
+
+    match /Groups/{groupId} {
+      allow read: if signedIn();
+      allow create: if me() == request.resource.data.createdBy;
+      allow update: if signedIn()
+        && (me() in resource.data.members || me() in resource.data.admins);
+      allow delete: if me() in resource.data.members;
+    }
+
+    match /GroupMessages/{groupId}/Messages/{messageId} {
+      allow read: if signedIn()
+        && me() in get(/databases/$(database)/documents/Groups/$(groupId)).data.memberInfo;
+      allow create: if me() == request.resource.data.senderId
+        && me() in get(/databases/$(database)/documents/Groups/$(groupId)).data.members;
+      allow update: if signedIn()
+        && me() in get(/databases/$(database)/documents/Groups/$(groupId)).data.memberInfo;
+    }
+
+    match /DeletedMessages/{uid}/{document=**} {
+      allow read, write: if me() == uid;
+    }
+    match /DeletedGroupMessages/{uid}/{document=**} {
+      allow read, write: if me() == uid;
+    }
+  }
+}

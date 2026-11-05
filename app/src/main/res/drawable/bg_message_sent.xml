@@ -1,13 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <solid android:color="#DCF8C6"/>
-
+    <solid android:color="@color/bubble_sent" />
     <corners
-        android:topLeftRadius="22dp"
-        android:topRightRadius="22dp"
-        android:bottomLeftRadius="22dp"
-        android:bottomRightRadius="6dp"/>
-
+        android:topLeftRadius="18dp"
+        android:topRightRadius="18dp"
+        android:bottomLeftRadius="18dp"
+        android:bottomRightRadius="4dp" />
 </shape>

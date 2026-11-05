@@ -2,5 +2,48 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="purple_500">#6750A4</color>
+
+    <!-- Launcher -->
+    <color name="ic_launcher_background">#D6F3EF</color>
+    <color name="splash_background">#D6F3EF</color>
+    <color name="splash_title">#114F82</color>
+
+    <!-- Brand (taken from the ConnectHub logo: blue / orange / teal) -->
+    <color name="brand_primary">#1E5AA8</color>
+    <color name="brand_on_primary">#FFFFFF</color>
+    <color name="brand_primary_container">#D6E3FF</color>
+    <color name="brand_on_primary_container">#001B3E</color>
+    <color name="brand_secondary">#B84E00</color>
+    <color name="brand_on_secondary">#FFFFFF</color>
+    <color name="brand_secondary_container">#FFDBC8</color>
+    <color name="brand_on_secondary_container">#341100</color>
+    <color name="brand_tertiary">#146A64</color>
+    <color name="brand_on_tertiary">#FFFFFF</color>
+
+    <!-- Surfaces -->
+    <color name="app_background">#F4F7FB</color>
+    <color name="app_surface">#FFFFFF</color>
+    <color name="app_surface_variant">#E3E9F1</color>
+    <color name="app_on_surface">#1A1C1E</color>
+    <color name="app_on_surface_variant">#5A6270</color>
+    <color name="app_outline">#C5CCD6</color>
+    <color name="app_error">#BA1A1A</color>
+
+    <!-- Semantic colours used by drawables / layouts -->
+    <color name="divider">#E1E6ED</color>
+    <color name="text_secondary">#5A6270</color>
+    <color name="avatar_background">#B5BFCC</color>
+    <color name="badge_red">#E53935</color>
+    <color name="online_green">#2E9E5B</color>
+    <color name="tick_seen">#2196F3</color>
+    <color name="tick_pending">#8A929E</color>
+    <color name="bubble_sent">#D6E3FF</color>
+    <color name="bubble_received">#FFFFFF</color>
+    <color name="bubble_text">#1A1C1E</color>
+    <color name="bubble_meta">#5A6270</color>
+    <color name="bubble_reply_bg">#14000000</color>
+    <color name="reaction_chip_bg">#FFFFFF</color>
+    <color name="reaction_chip_stroke">#D5DAE1</color>
+    <color name="input_bar_bg">#FFFFFF</color>
+    <color name="reply_bar_bg">#EEF2F7</color>
 </resources>

@@ -1,40 +1,41 @@
 package com.example.connecthub.activities;
 
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.connecthub.R;
-import com.example.connecthub.models.GroupMemberInfo;
-import com.example.connecthub.models.MembershipPeriod;
+import com.example.connecthub.adapters.AddMemberAdapter;
+import com.example.connecthub.helpers.GroupHelper;
+import com.example.connecthub.models.User;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.example.connecthub.adapters.AddMemberAdapter;
-import com.example.connecthub.models.User;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.example.connecthub.models.Group;
+public class AddGroupMemberActivity extends BaseActivity {
 
-public class AddGroupMemberActivity extends AppCompatActivity {
+    /** Everyone who is not currently in the group */
+    private final List<User> candidates = new ArrayList<>();
+    /** What is shown (candidates filtered by the search text) */
     private final List<User> userList = new ArrayList<>();
 
     private AddMemberAdapter adapter;
-
-    private MaterialToolbar toolbar;
     private TextInputEditText etSearch;
-    private RecyclerView recyclerUsers;
+    private TextView tvEmpty;
 
     private FirebaseFirestore firestore;
-
     private String groupId;
 
     @Override
@@ -42,24 +43,47 @@ public class AddGroupMemberActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_add_group_member);
 
-        toolbar = findViewById(R.id.toolbar);
+        groupId = getIntent().getStringExtra("groupId");
+
+        if (groupId == null) {
+            finish();
+            return;
+        }
+
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        toolbar.setNavigationOnClickListener(v -> finish());
+
         etSearch = findViewById(R.id.etSearch);
-        recyclerUsers = findViewById(R.id.recyclerUsers);
+        tvEmpty = findViewById(R.id.tvEmpty);
+        RecyclerView recyclerUsers = findViewById(R.id.recyclerUsers);
 
         firestore = FirebaseFirestore.getInstance();
 
-        groupId = getIntent().getStringExtra("groupId");
-
-        recyclerUsers.setLayoutManager(
-                new LinearLayoutManager(this)
-        );
         adapter = new AddMemberAdapter(userList, this::addMemberToGroup);
 
+        recyclerUsers.setLayoutManager(new LinearLayoutManager(this));
         recyclerUsers.setAdapter(adapter);
 
+        // The search box used to be decoration only; it now filters the list
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                applyFilter();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+
         loadUsers();
-        toolbar.setNavigationOnClickListener(v -> finish());
     }
+
+    @SuppressWarnings("unchecked")
     private void loadUsers() {
 
         firestore.collection("Groups")
@@ -67,24 +91,23 @@ public class AddGroupMemberActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(groupDoc -> {
 
-                    if (!groupDoc.exists()) return;
+                    if (!groupDoc.exists()) {
+                        finish();
+                        return;
+                    }
 
-                    Group group = groupDoc.toObject(Group.class);
+                    Object membersObject = groupDoc.get("members");
 
-                    if (group == null) return;
-
-                    List<String> currentMembers =
-                            group.getMembers() == null
-                                    ? new ArrayList<>()
-                                    : new ArrayList<>(group.getMembers());
+                    List<String> currentMembers = membersObject instanceof List
+                            ? (List<String>) membersObject : new ArrayList<>();
 
                     firestore.collection("Users")
                             .get()
-                            .addOnSuccessListener(queryDocumentSnapshots -> {
+                            .addOnSuccessListener(snapshot -> {
 
-                                userList.clear();
+                                candidates.clear();
 
-                                for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
+                                for (DocumentSnapshot doc : snapshot.getDocuments()) {
 
                                     User user = doc.toObject(User.class);
 
@@ -93,123 +116,61 @@ public class AddGroupMemberActivity extends AppCompatActivity {
                                     user.setUid(doc.getId());
 
                                     if (!currentMembers.contains(user.getUid())) {
-
-                                        userList.add(user);
-
+                                        candidates.add(user);
                                     }
-
                                 }
 
-                                adapter.notifyDataSetChanged();
-
-                            });
-
-                });
-
+                                applyFilter();
+                            })
+                            .addOnFailureListener(e ->
+                                    Toast.makeText(this, "Couldn't load users",
+                                            Toast.LENGTH_SHORT).show());
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Couldn't load group", Toast.LENGTH_SHORT).show());
     }
+
+    private void applyFilter() {
+
+        String query = etSearch.getText() == null
+                ? "" : etSearch.getText().toString().trim().toLowerCase(Locale.getDefault());
+
+        userList.clear();
+
+        for (User user : candidates) {
+
+            String name = user.getName() == null ? "" : user.getName().toLowerCase(Locale.getDefault());
+            String username = user.getUsername() == null ? "" : user.getUsername().toLowerCase(Locale.getDefault());
+
+            if (query.isEmpty() || name.contains(query) || username.contains(query)) {
+                userList.add(user);
+            }
+        }
+
+        adapter.notifyDataSetChanged();
+
+        tvEmpty.setVisibility(userList.isEmpty() ? View.VISIBLE : View.GONE);
+    }
+
     private void addMemberToGroup(User user) {
 
-        firestore.collection("Groups")
-                .document(groupId)
-                .get()
-                .addOnSuccessListener(document -> {
+        GroupHelper.addMember(groupId, user.getUid(), new GroupHelper.Callback() {
 
-                    if (!document.exists()) return;
+            @Override
+            public void onSuccess() {
+                candidates.remove(user);
+                applyFilter();
 
-                    Group group = document.toObject(Group.class);
+                Toast.makeText(AddGroupMemberActivity.this,
+                        (user.getName() == null ? "User" : user.getName()) + " added",
+                        Toast.LENGTH_SHORT).show();
+            }
 
-                    if (group == null) return;
-
-                    List<String> members =
-                            group.getMembers() == null
-                                    ? new ArrayList<>()
-                                    : new ArrayList<>(group.getMembers());
-
-                    if (!members.contains(user.getUid())) {
-                        members.add(user.getUid());
-                    }
-
-                    long now = System.currentTimeMillis();
-
-                    // ===============================
-                    // Current Member Info
-                    // ===============================
-
-                    Map<String, GroupMemberInfo> memberInfo =
-                            group.getMemberInfo();
-
-                    if (memberInfo == null) {
-                        memberInfo = new HashMap<>();
-                    }
-
-                    GroupMemberInfo info =
-                            memberInfo.get(user.getUid());
-
-                    if (info == null) {
-
-                        info = new GroupMemberInfo();
-
-                    }
-
-                    info.setJoinedAt(now);
-                    info.setLeftAt(null);
-                    info.setActive(true);
-
-                    memberInfo.put(user.getUid(), info);
-
-                    // ===============================
-                    // Membership History
-                    // ===============================
-
-                    Map<String, List<MembershipPeriod>> memberHistory =
-                            group.getMemberHistory();
-
-                    if (memberHistory == null) {
-                        memberHistory = new HashMap<>();
-                    }
-
-                    List<MembershipPeriod> periods =
-                            memberHistory.get(user.getUid());
-
-                    if (periods == null) {
-                        periods = new ArrayList<>();
-                    }
-
-                    MembershipPeriod newPeriod =
-                            new MembershipPeriod();
-
-                    newPeriod.setJoinedAt(now);
-                    newPeriod.setLeftAt(null);
-
-                    periods.add(newPeriod);
-
-                    memberHistory.put(user.getUid(), periods);
-
-                    // ===============================
-                    // Update Firestore
-                    // ===============================
-
-                    firestore.collection("Groups")
-                            .document(groupId)
-                            .update(
-                                    "members", members,
-                                    "memberInfo", memberInfo,
-                                    "memberHistory", memberHistory,
-                                    "membersCount", members.size()
-                            )
-                            .addOnSuccessListener(unused -> {
-
-                                Toast.makeText(
-                                        this,
-                                        user.getName() + " added",
-                                        Toast.LENGTH_SHORT
-                                ).show();
-
-                                loadUsers();
-
-                            });
-
-                });
-
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                Toast.makeText(AddGroupMemberActivity.this,
+                        "Couldn't add member", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }
